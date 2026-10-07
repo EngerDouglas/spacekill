@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e5e7c2f79ae9479c4d07eedbef339, type: 3}
+  m_Name: PlasmaRifle
+  m_EditorClassIdentifier: OrbitRush.Runtime::OrbitRush.WeaponDefinition
+  displayName: Plasma Rifle
+  grip: 0
+  fireRate: 0.1
+  maxAmmo: 60
+  reloadTime: 1.5
+  projectileSpeed: 110
+  spread: 1.5
+  damage: 0
+  hasScope: 0
+  scopeFov: 20
+  scopeSensitivityMultiplier: 0.35

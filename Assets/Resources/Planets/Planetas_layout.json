@@ -1,0 +1,47 @@
+{
+    "planets": [
+        {
+            "child": "Bosque",
+            "radiusMin": 37.99996566772461,
+            "radiusMax": 38.0000114440918,
+            "radiusMean": 37.999996185302737
+        },
+        {
+            "child": "Desierto",
+            "radiusMin": 59.99986267089844,
+            "radiusMax": 60.000003814697269,
+            "radiusMean": 59.999969482421878
+        },
+        {
+            "child": "Industrial_Tanques",
+            "radiusMin": 33.999969482421878,
+            "radiusMax": 34.000038146972659,
+            "radiusMean": 33.999996185302737
+        },
+        {
+            "child": "NeonDistrict_Downtown",
+            "radiusMin": 39.99995422363281,
+            "radiusMax": 40.000022888183597,
+            "radiusMean": 39.99999237060547
+        },
+        {
+            "child": "NeonDistrict_SkyGardens",
+            "radiusMin": 23.999950408935548,
+            "radiusMax": 31.11705207824707,
+            "radiusMean": 24.12224578857422
+        },
+        {
+            "child": "Nieve",
+            "radiusMin": 35.99995422363281,
+            "radiusMax": 36.00001525878906,
+            "radiusMean": 35.999996185302737
+        }
+    ],
+    "hasSun": true,
+    "sunEuler": {
+        "x": 48.97352981567383,
+        "y": 341.69207763671877,
+        "z": 15.339812278747559
+    },
+    "unitScale": 100.0
+}

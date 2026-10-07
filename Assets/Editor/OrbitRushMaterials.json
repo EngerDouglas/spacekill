@@ -1,0 +1,1576 @@
+{
+ "items": [
+  {
+   "name": "Leaves",
+   "emit": [
+    0.3372,
+    1.0,
+    0.0
+   ],
+   "strength": 0.12,
+   "rough": 0.8,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Leaves_Dark",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.8,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Trunk",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Neon_Cyan",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 14.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Win_Pink",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 5.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Neon_Pink",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 14.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Dark_Metal",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.7,
+   "alpha": 1.0
+  },
+  {
+   "name": "Screen_Magenta",
+   "emit": [
+    1.0,
+    0.0,
+    0.3916
+   ],
+   "strength": 6.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Icon_White",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 12.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Neon_Yellow",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 10.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "B_Pink",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.45,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "Win_Yellow",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 4.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Win_Cyan",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 5.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Screen_Cyan",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 5.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Icon_Yellow",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 10.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Neon_Violet",
+   "emit": [
+    0.2542,
+    0.0242,
+    0.7605
+   ],
+   "strength": 18.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Screen_Violet",
+   "emit": [
+    0.2542,
+    0.0242,
+    0.7605
+   ],
+   "strength": 8.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "B_Orange",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.5,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "B_Violet",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.4,
+   "metal": 0.2,
+   "alpha": 1.0
+  },
+  {
+   "name": "B_Royal",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.4,
+   "metal": 0.2,
+   "alpha": 1.0
+  },
+  {
+   "name": "B_Magenta",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.45,
+   "metal": 0.15,
+   "alpha": 1.0
+  },
+  {
+   "name": "B_Yellow",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.5,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "B_Dark",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.5,
+   "alpha": 1.0
+  },
+  {
+   "name": "Soft_White",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "Deck_Top",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.4,
+   "metal": 0.5,
+   "alpha": 1.0
+  },
+  {
+   "name": "G_NeonGreen",
+   "emit": [
+    0.3372,
+    1.0,
+    0.0
+   ],
+   "strength": 10.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Waterfall",
+   "emit": [
+    0.0356,
+    0.624,
+    1.0
+   ],
+   "strength": 2.5,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Ind_Ground",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.7,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Win_Orange",
+   "emit": [
+    1.0,
+    0.1441,
+    0.0
+   ],
+   "strength": 5.0,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "B_Dark2",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.5,
+   "alpha": 1.0
+  },
+  {
+   "name": "Portal",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 4.0,
+   "rough": 0.0,
+   "metal": 0.0,
+   "alpha": 0.55
+  },
+  {
+   "name": "Grass",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.85,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "G_Sky",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "G_Mint",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "City_Ground",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.5,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Plastic_Grey",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.4,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Plastic_Dark",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_pink_12",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 12.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Plastic_Pink",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_white_12",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 12.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Plastic_White",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.28,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_white_18",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 18.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glass_pink_0.45",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 8.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Glass_pink_0.5",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 4.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.5
+  },
+  {
+   "name": "Pro_Glow_white_25",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 25.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glass_pink_0.4",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 8.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.4
+  },
+  {
+   "name": "Pro_Glow_pink_14",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 14.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glass_pink_0.35",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 1.5,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.35
+  },
+  {
+   "name": "Pro_Glow_white_16",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 16.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_pink_10",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 10.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_pink_16",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 16.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Rubber_Grip",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.75,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_cyan_12",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 12.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_white_14",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 14.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Plastic_Blue",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Plastic_Navy",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.32,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glass_cyan_0.35",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 1.5,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.35
+  },
+  {
+   "name": "Pro_Glass_cyan_0.6",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 5.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.6
+  },
+  {
+   "name": "Pro_Glass_cyan_0.45",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 8.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Glass_cyan_0.5",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 10.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.5
+  },
+  {
+   "name": "Pro_Glass_cyan_0.4",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 8.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.4
+  },
+  {
+   "name": "Pro_Glow_cyan_14",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 14.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_cyan_10",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 10.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_cyan_18",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 18.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Scorch",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Metal_Gunmetal",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.25,
+   "metal": 1.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glass_pink_0.6",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 4.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.6
+  },
+  {
+   "name": "Pro_Glow_white_10",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 10.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Metal_Silver",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.18,
+   "metal": 1.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Hole",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 1.0,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Crack",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Dust0",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Dust1",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Dust2",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Dust3",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Dust4",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Glow_pink_8",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 8.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_yellow_16",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 16.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_white_20",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 20.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glass_cyan_0.25",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 4.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.25
+  },
+  {
+   "name": "Pro_Glow_white_22",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 22.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_cyan_16",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 16.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_orange_16",
+   "emit": [
+    1.0,
+    0.1441,
+    0.0
+   ],
+   "strength": 16.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Fireball0",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 14.0,
+   "rough": 0.4,
+   "metal": 0.0,
+   "alpha": 0.9
+  },
+  {
+   "name": "Pro_Fireball1",
+   "emit": [
+    1.0,
+    0.1441,
+    0.0
+   ],
+   "strength": 10.0,
+   "rough": 0.4,
+   "metal": 0.0,
+   "alpha": 0.7
+  },
+  {
+   "name": "Pro_Fireball2",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 7.0,
+   "rough": 0.4,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Smoke",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 0.6
+  },
+  {
+   "name": "M_Neon_Cyan",
+   "emit": [
+    0.0,
+    0.9,
+    1.0
+   ],
+   "strength": 3.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Trim_White",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.4,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Neon_Pink",
+   "emit": [
+    1.0,
+    0.05,
+    0.55
+   ],
+   "strength": 2.2,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_En_Yellow",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_En_Pink",
+   "emit": [
+    1.0,
+    0.05,
+    0.55
+   ],
+   "strength": 4.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Table",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.5,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_En_Black",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.7,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Suit_Navy",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.55,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_HUD_White",
+   "emit": [
+    0.85,
+    0.9,
+    1.0
+   ],
+   "strength": 1.2,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Visor_Black",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.6,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Rubber",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.7,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_En_White",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.45,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_En_Cyan",
+   "emit": [
+    0.0,
+    0.9,
+    1.0
+   ],
+   "strength": 4.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Neon_Blanco",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 4.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Helmet_Yellow",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Cloth",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Katana_Amarillo",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Katana_Magenta",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Gun_Metal",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.8,
+   "alpha": 1.0
+  },
+  {
+   "name": "Katana_Negro",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.3,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_En_Glass",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.05,
+   "metal": 0.8,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Visor_Glass",
+   "emit": [
+    0.9,
+    0.05,
+    0.5
+   ],
+   "strength": 0.0,
+   "rough": 0.05,
+   "metal": 0.6,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Board",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.4,
+   "metal": 0.5,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Battery",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.7,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Foam",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_ExpFloor",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.5,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Clear_Shield",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.03,
+   "metal": 0.0,
+   "alpha": 0.3
+  },
+  {
+   "name": "Neon_Rosa",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 3.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Helmet_Blue",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Helmet_White",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Helmet_Black",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Katana_Hoja_Grafiti",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.35,
+   "rough": 0.22,
+   "metal": 0.3,
+   "alpha": 1.0
+  },
+  {
+   "name": "Katana_Blanco",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Neon_Magenta",
+   "emit": [
+    1.0,
+    0.0,
+    0.3916
+   ],
+   "strength": 3.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Katana_Mango",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.85,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Purple_Bottle",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Pedestal",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.35,
+   "metal": 0.4,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pomo_Pantalla",
+   "emit": [
+    1.0,
+    0.0,
+    0.3916
+   ],
+   "strength": 1.5,
+   "rough": 0.3,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "M_Tactical_Green",
+   "emit": [
+    0.1,
+    1.0,
+    0.6
+   ],
+   "strength": 0.6,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.45
+  },
+  {
+   "name": "Pro_Metal_Copper",
+   "emit": [
+    1,
+    1,
+    1
+   ],
+   "strength": 0.0,
+   "rough": 0.28,
+   "metal": 0.95,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Metal_Brass",
+   "emit": [
+    1,
+    1,
+    1
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.95,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Metal_Steel",
+   "emit": [
+    1,
+    1,
+    1
+   ],
+   "strength": 0.0,
+   "rough": 0.22,
+   "metal": 0.95,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Debris_rock",
+   "emit": [
+    1,
+    1,
+    1
+   ],
+   "strength": 0.0,
+   "rough": 0.9,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Pro_Glow_red_12",
+   "emit": [
+    1.0,
+    0.01,
+    0.01
+   ],
+   "strength": 12.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  }
+ ]
+}

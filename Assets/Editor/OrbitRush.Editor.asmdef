@@ -1,0 +1,8 @@
+{
+    "name": "OrbitRush.Editor",
+    "rootNamespace": "OrbitRush",
+    "references": [ "OrbitRush.Runtime" ],
+    "includePlatforms": [ "Editor" ],
+    "excludePlatforms": [],
+    "autoReferenced": true
+}

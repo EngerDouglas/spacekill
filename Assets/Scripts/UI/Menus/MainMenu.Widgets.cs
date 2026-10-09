@@ -1,15 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace OrbitRush
 {
 
-/// <summary>Main-menu UI building blocks: canvas, boxes, buttons, labels.</summary>
+/// <summary>Menu UI building blocks (Apex look): canvas, labels, text entries, left-aligned column screens, sliders.</summary>
 public partial class MainMenu
 {
     // ══════════════════════════════════════════════════════════════════════
@@ -24,7 +20,7 @@ public partial class MainMenu
         go.transform.SetParent(transform, false);
         _canvas = go.AddComponent<Canvas>();
         _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 50;                      // above HUD (10), scope (15) and scoreboard (20)
+        _canvas.sortingOrder = 50;                      // above HUD (10), wheel (12), scope (15) and scoreboard (20)
 
         var scaler = go.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -42,100 +38,44 @@ public partial class MainMenu
     private static RectTransform NewRect(string name, Transform parent, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
         => UiFactory.NewRect(name, parent, anchor, pivot, pos, size);
 
-    /// <summary>
-    /// A plain filled rectangle — or, when a border colour is given, an angular neon panel
-    /// (chamfered corners, inner glow, corner ticks; see NeonPanel).
-    /// </summary>
-    private Graphic Box(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size,
-                        Color color, Color? border = null, float borderWidth = 2f)
+    private static void Stretch(RectTransform rt)
+    {
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+    }
+
+    /// <summary>A plain filled rectangle (no border, no glow).</summary>
+    private Image Box(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color color)
     {
         var rt = NewRect(name, parent, anchor, pivot, pos, size);
-        if (border.HasValue)
-            return MakeNeon(rt, size, color, border.Value, borderWidth);
-
         var img = rt.gameObject.AddComponent<Image>();
         img.color = color;
         img.raycastTarget = false;
         return img;
     }
 
-    private static NeonPanel MakeNeon(RectTransform rt, Vector2 size, Color fill, Color border, float borderWidth)
-    {
-        var p = rt.gameObject.AddComponent<NeonPanel>();
-        float small = Mathf.Min(size.x, size.y);
-        bool tiny = small < 44f;
-
-        p.border = border;
-        p.borderThickness = tiny ? Mathf.Min(borderWidth, 2f) : Mathf.Max(2.5f, borderWidth);
-        p.chamfer = Mathf.Clamp(small * 0.22f, 0f, 20f);
-        p.cutTL = false; p.cutTR = true; p.cutBR = false; p.cutBL = true;
-
-        // Vertical gradient from the given fill: a touch lighter on top, clearly darker at the bottom.
-        Color top = Color.Lerp(fill, Color.white, 0.07f); top.a = fill.a;
-        Color bottom = fill * 0.55f; bottom.a = fill.a;
-        p.fillTop = top; p.fillBottom = bottom;
-
-        p.cornerAccents = !tiny;
-        p.glowThickness = tiny ? 0f : Mathf.Min(11f, small * 0.12f + 4f);
-        return p;
-    }
-
-    private NeonPanel HexBox(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color accent)
-    {
-        var rt = NewRect(name, parent, anchor, pivot, pos, size);
-        var p = rt.gameObject.AddComponent<NeonPanel>();
-        p.shape = NeonPanel.Shape.Hexagon;
-        p.border = accent;
-        p.borderThickness = 2.5f;
-        p.glowThickness = 10f;
-        p.cornerAccents = false;
-        p.fillTop = Color.Lerp(NavyDeep, accent, 0.34f);
-        p.fillBottom = NavyDeep;
-        return p;
-    }
-
-    /// <summary>Slanted title tab hanging on a panel's top-left edge (like "DRON GUARDIÁN" in the art).</summary>
-    private NeonPanel Tab(Transform panel, string text, Color accent, float x = 24f, int fontSize = 18)
-    {
-        float w = text.Length * fontSize * 0.66f + 48f;
-        var rt = NewRect("Tab_" + text, panel, TL, new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(w, 34f));
-        var p = rt.gameObject.AddComponent<NeonPanel>();
-        p.shape = NeonPanel.Shape.Parallelogram;
-        p.slant = 13f;
-        p.border = new Color(1f, 1f, 1f, 0.95f);
-        p.borderThickness = 1.5f;
-        p.glowThickness = 6f;
-        p.glowAlpha = 0.35f;
-        p.cornerAccents = false;
-        Color top = Color.Lerp(accent, White, 0.18f); top.a = 1f;
-        Color bottom = accent * 0.72f; bottom.a = 1f;
-        p.fillTop = top; p.fillBottom = bottom;
-        Label(rt, text, fontSize, White, TextAnchor.MiddleCenter, CC, CC, Vector2.zero, new Vector2(w, 34f), FontStyle.BoldAndItalic);
-        return p;
-    }
-
+    /// <summary>
+    /// A text label. <paramref name="font"/> picks the Inter weight (light for big titles, semibold for names, regular otherwise).
+    /// A faint shadow keeps it readable over the blurred world.
+    /// </summary>
     private Text Label(Transform parent, string text, int size, Color color, TextAnchor align,
-                       Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 boxSize,
-                       FontStyle style = FontStyle.Bold, Color? outline = null)
+                       Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 boxSize, Font font = null)
     {
         var rt = NewRect("Text", parent, anchor, pivot, pos, boxSize);
         var t = rt.gameObject.AddComponent<Text>();
-        t.font = _font;
+        t.font = font != null ? font : _font;
         t.text = text;
         t.fontSize = size;
-        t.fontStyle = style;
+        t.fontStyle = FontStyle.Normal;
         t.color = color;
         t.alignment = align;
         t.horizontalOverflow = HorizontalWrapMode.Overflow;
         t.verticalOverflow = VerticalWrapMode.Overflow;
         t.supportRichText = true;
         t.raycastTarget = false;
-        if (outline.HasValue)
-        {
-            var o = rt.gameObject.AddComponent<Outline>();
-            o.effectColor = outline.Value;
-            o.effectDistance = new Vector2(3f, -3f);
-        }
+        var s = rt.gameObject.AddComponent<Shadow>();
+        s.effectColor = new Color(0f, 0f, 0f, 0.45f);
+        s.effectDistance = new Vector2(1f, -1f);
         return t;
     }
 
@@ -144,50 +84,64 @@ public partial class MainMenu
         target.raycastTarget = true;
         var b = target.gameObject.AddComponent<Button>();
         b.targetGraphic = target;
-        var cb = b.colors;
-        cb.normalColor = new Color(0.88f, 0.88f, 0.94f, 1f);
-        cb.highlightedColor = Color.white;
-        cb.pressedColor = new Color(0.7f, 0.7f, 0.8f, 1f);
-        cb.selectedColor = cb.normalColor;
-        cb.fadeDuration = 0.06f;
-        b.colors = cb;
+        b.transition = Selectable.Transition.None;
         var nav = b.navigation; nav.mode = Navigation.Mode.None; b.navigation = nav;
         b.onClick.AddListener(() => onClick());
         return b;
     }
 
-    /// <summary>Standard wide menu button used by the pause / settings panels.</summary>
-    private Graphic MenuButton(Transform parent, string text, Vector2 pos, Color accent, System.Action onClick, float width = 520f, float height = 84f)
+    // ── Text entries ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// One clickable text entry: a transparent hit area with a left accent bar and the label. Hover or keyboard focus turns the
+    /// label cyan, nudges it right and grows the bar (see <see cref="MenuItemFx"/>). Position is the entry's left-middle point.
+    /// </summary>
+    private MenuItemFx MenuItem(Transform parent, string text, Vector2 pos, System.Action onClick, int size = 34, bool primary = false,
+                                float width = 560f, Vector2? anchor = null)
     {
-        var bg = Box(parent, "Btn_" + text, CC, CC, pos, new Vector2(width, height), Color.Lerp(NavyDeep, accent, 0.28f), accent);
-        Label(bg.transform, text, 32, White, TextAnchor.MiddleCenter, CC, CC, Vector2.zero, new Vector2(width, height));
-        MakeClickable(bg, onClick);
-        return bg;
+        Vector2 a = anchor ?? ML;
+        var hit = NewRect("Item_" + text, parent, a, ML, pos, new Vector2(width, 64f));
+        var area = hit.gameObject.AddComponent<Image>();
+        area.color = new Color(0f, 0f, 0f, 0f);
+        area.raycastTarget = true;
+
+        var bar = Box(hit, "Bar", ML, ML, Vector2.zero, new Vector2(3f, 8f), new Color(Cyan.r, Cyan.g, Cyan.b, 0f));
+        var label = Label(hit, text, size, primary ? White : Soft, TextAnchor.MiddleLeft, ML, ML, new Vector2(24f, 0f),
+                          new Vector2(width - 24f, 64f), primary ? _fontSemi : _fontLight);
+
+        var btn = hit.gameObject.AddComponent<Button>();
+        btn.targetGraphic = area;
+        btn.transition = Selectable.Transition.None;
+        var nav = btn.navigation; nav.mode = Navigation.Mode.None; btn.navigation = nav;
+
+        var fx = hit.gameObject.AddComponent<MenuItemFx>();
+        fx.label = label; fx.bar = bar; fx.normal = primary ? White : Soft; fx.active = Cyan; fx.onClick = onClick;
+        btn.onClick.AddListener(() => onClick());
+
+        _pending.Add(fx);
+        return fx;
     }
 
-    /// <summary>Feature card: accent bar, icon badge, title and subtitle (the centre of the home screen).</summary>
-    private Text Card(Transform parent, string title, string subtitle, Vector2 anchor, Vector2 pivot, Vector2 pos,
-                      Color accent, string icon, System.Action onClick)
+    /// <summary>
+    /// A left-aligned screen: dark gradient on the left, big light title, a small line under it, a column of text entries and a
+    /// hint line at the bottom. Used by the home screen and the pause menu (the world behind is blurred, so the text needs no panel).
+    /// </summary>
+    private Text BuildColumn(Transform parent, string title, string subtitle, string[] names, System.Action[] actions, string hint)
     {
-        var bg = Box(parent, "Card_" + title, anchor, pivot, pos, new Vector2(540f, 114f), Navy, accent);
-        var badge = HexBox(bg.transform, "Badge", ML, ML, new Vector2(22f, 0f), new Vector2(88f, 80f), accent);
-        Label(badge.transform, icon, 44, accent, TextAnchor.MiddleCenter, CC, CC, Vector2.zero, new Vector2(88f, 80f));
-        Label(bg.transform, title, 32, White, TextAnchor.UpperLeft, TL, TL, new Vector2(128f, -20f), new Vector2(400f, 40f), FontStyle.BoldAndItalic);
-        var sub = Label(bg.transform, subtitle, 20, Muted, TextAnchor.UpperLeft, TL, TL, new Vector2(128f, -64f), new Vector2(400f, 30f), FontStyle.Normal);
-        MakeClickable(bg, onClick);
+        var shadeRt = NewRect("Shade_Left", parent, CC, CC, Vector2.zero, Vector2.zero);
+        Stretch(shadeRt);
+        var shade = shadeRt.gameObject.AddComponent<Image>();
+        shade.sprite = LeftShade();
+        shade.raycastTarget = false;
+
+        Label(parent, title, 64, White, TextAnchor.MiddleLeft, TL, TL, new Vector2(120f, -96f), new Vector2(900f, 84f), _fontLight);
+        var sub = Label(parent, subtitle, 16, Soft, TextAnchor.MiddleLeft, TL, TL, new Vector2(124f, -182f), new Vector2(700f, 22f));
+
+        for (int i = 0; i < names.Length; i++)
+            MenuItem(parent, names[i], new Vector2(96f, 70f - i * 72f), actions[i], i == 0 ? 40 : 34, i == 0);
+
+        Label(parent, hint, 13, Soft, TextAnchor.MiddleLeft, BL, BL, new Vector2(124f, 48f), new Vector2(900f, 20f));
         return sub;
-    }
-
-    private void NavItem(Transform parent, string label, string icon, float y, bool selected, System.Action onClick)
-    {
-        Color accent = selected ? Pink : Cyan;
-        var bg = Box(parent, "Nav_" + label, ML, ML, new Vector2(0f, y), new Vector2(390f, 74f),
-                     selected ? Color.Lerp(NavyDeep, Pink, 0.40f) : Navy,
-                     selected ? Pink : new Color(0f, 0.72f, 0.95f, 0.55f));
-        var hex = HexBox(bg.transform, "Icon", ML, ML, new Vector2(16f, 0f), new Vector2(54f, 48f), accent);
-        Label(hex.transform, icon, 26, selected ? White : Cyan, TextAnchor.MiddleCenter, CC, CC, Vector2.zero, new Vector2(54f, 48f));
-        Label(bg.transform, label, 26, White, TextAnchor.MiddleLeft, ML, ML, new Vector2(92f, 0f), new Vector2(290f, 74f), FontStyle.BoldAndItalic);
-        MakeClickable(bg, onClick);
     }
 
     private void Toast(string message)
@@ -196,6 +150,70 @@ public partial class MainMenu
         _toast.text = message;
         _toast.color = new Color(1f, 1f, 1f, 1f);
         _toastTimer = 2.2f;
+    }
+
+    // ── Slider: thin track, cyan fill, small round handle ─────────────────
+
+    private Slider MakeSlider(Transform parent, Vector2 pos, Vector2 size, float min, float max, float value, UnityEngine.Events.UnityAction<float> onChange)
+    {
+        var rt = NewRect("Slider", parent, TL, TL, pos, size);
+        var slider = rt.gameObject.AddComponent<Slider>();
+
+        var back = Box(rt, "Background", CC, CC, Vector2.zero, new Vector2(size.x, 3f), Track);
+        back.rectTransform.anchorMin = new Vector2(0f, 0.5f); back.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+        back.rectTransform.offsetMin = new Vector2(0f, -1.5f); back.rectTransform.offsetMax = new Vector2(0f, 1.5f);
+
+        var fillArea = NewRect("Fill Area", rt, CC, CC, Vector2.zero, Vector2.zero);
+        fillArea.anchorMin = new Vector2(0f, 0.5f); fillArea.anchorMax = new Vector2(1f, 0.5f);
+        fillArea.offsetMin = new Vector2(0f, -1.5f); fillArea.offsetMax = new Vector2(0f, 1.5f);
+        var fill = Box(fillArea, "Fill", CC, CC, Vector2.zero, Vector2.zero, Cyan);
+        fill.rectTransform.anchorMin = new Vector2(0f, 0f); fill.rectTransform.anchorMax = new Vector2(0f, 1f);
+        fill.rectTransform.offsetMin = Vector2.zero; fill.rectTransform.offsetMax = new Vector2(8f, 0f);
+
+        var handleArea = NewRect("Handle Slide Area", rt, CC, CC, Vector2.zero, Vector2.zero);
+        handleArea.anchorMin = Vector2.zero; handleArea.anchorMax = Vector2.one;
+        handleArea.offsetMin = new Vector2(9f, 0f); handleArea.offsetMax = new Vector2(-9f, 0f);
+        var handle = Box(handleArea, "Handle", CC, CC, Vector2.zero, new Vector2(18f, 18f), White);
+        handle.sprite = Dot();
+        handle.rectTransform.anchorMin = new Vector2(0f, 0.5f); handle.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+        handle.rectTransform.sizeDelta = new Vector2(18f, 18f);
+        handle.raycastTarget = true;
+
+        slider.fillRect = fill.rectTransform;
+        slider.handleRect = handle.rectTransform;
+        slider.targetGraphic = handle;
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = min;
+        slider.maxValue = max;
+        slider.SetValueWithoutNotify(Mathf.Clamp(value, min, max));
+        slider.onValueChanged.AddListener(onChange);
+        return slider;
+    }
+
+    // ── Generated sprites ─────────────────────────────────────────────────
+
+    private static Sprite _dot, _leftShade;
+
+    private static Sprite Dot()
+    {
+        if (_dot == null) _dot = UiFactory.RadialSprite(64, d => Mathf.Clamp01((1f - d) * 32f), "MenuDot");
+        return _dot;
+    }
+
+    /// <summary>Black fading to transparent from left to right: darkens the text side of the screen.</summary>
+    private static Sprite LeftShade()
+    {
+        if (_leftShade != null) return _leftShade;
+        const int w = 256;
+        var tex = new Texture2D(w, 1, TextureFormat.RGBA32, false) { name = "MenuLeftShade", wrapMode = TextureWrapMode.Clamp };
+        for (int x = 0; x < w; x++)
+        {
+            float t = x / (w - 1f);
+            tex.SetPixel(x, 0, new Color(0f, 0f, 0f, 0.78f * Mathf.Pow(1f - t, 1.6f)));
+        }
+        tex.Apply();
+        _leftShade = Sprite.Create(tex, new Rect(0, 0, w, 1), new Vector2(0.5f, 0.5f));
+        return _leftShade;
     }
 }
 }

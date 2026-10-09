@@ -9,13 +9,14 @@ namespace OrbitRush
 /// <summary>
 /// The katana (Resources/Weapons/Katana.fbx) and melee combat. Added to the player automatically.
 ///
-///   • The katana rides STOWED on the backpack (clipped to the chest bone) and is drawn into the right hand.
-///   • V (or right-stick click): TAP = light attack (Great Sword 180 Turn animation), alternating combo.
-///   • V held: CHARGES (the blade glows brighter and trembles); release for the charged attack (Great Sword
+///   • The katana is an inventory item (<see cref="Katana"/>), picked up and cycled like the guns. It is only drawn
+///     (and only attacks) while it is the active weapon; any other weapon makes it disappear.
+///   • Left click / V (or right trigger / right-stick click): TAP = light attack (Great Sword 180 Turn animation),
+///     alternating combo.
+///   • Held: CHARGES (the blade glows brighter and trembles); release for the charged attack (Great Sword
 ///     Jump Attack) — a slam that hits everything around you, harder the longer you charged.
 ///   • C (or B on a pad): DODGE — a spinning burst of speed (Walking Turn 180) with a brief invulnerability window.
-///   • Drawing the katana holsters the gun (firing is blocked); a few seconds after the last attack it
-///     returns to the back and the gun comes back.
+///     The dodge works whatever weapon is active.
 ///
 /// The arms are animated by the Mixamo clips (CharacterAnimator via PlayerAnimDriver, which listens to
 /// <see cref="AnimRequested"/>); the katana simply follows the hand / chest bone. Without a rigged model it
@@ -25,7 +26,7 @@ namespace OrbitRush
 [DefaultExecutionOrder(300)]       // after CameraRig / WeaponAim (first-person view-model follows the final camera)
 public partial class MeleeCombat : MonoBehaviour
 {
-    /// <summary>True while the katana is out — WeaponBase.TryFire refuses to shoot.</summary>
+    /// <summary>True while the katana is the active weapon (drawn): the animation driver uses the sword stance.</summary>
     public bool BlocksFiring { get; private set; }
 
     /// <summary>(animation key, duration) — asks the animation driver to play a one-shot.</summary>
@@ -62,12 +63,10 @@ public partial class MeleeCombat : MonoBehaviour
     public float dodgeStamina = 18f;
     public float dodgeInvulnerability = 0.38f;
 
-    [Header("Holster")]
+    [Header("Draw")]
     public float drawTime = 0.9f;
-    [Tooltip("Seconds after the last action before the katana goes back on the backpack.")]
-    public float sheatheDelay = 2.6f;
 
-    private enum State { Stowed, Drawing, Ready, Light, Charging, Charged, Sheathing }
+    private enum State { Stowed, Drawing, Ready, Light, Charging, Charged }
     private State _state = State.Stowed;
     private float _stateTime;
 
@@ -75,7 +74,6 @@ public partial class MeleeCombat : MonoBehaviour
     private bool _holding;
     private float _holdTime;
     private bool _queuedLight;
-    private float _idleTimer;
     private float _dodgeReadyAt;
     private float _chargePower;
     private bool _hitDone;
@@ -90,7 +88,7 @@ public partial class MeleeCombat : MonoBehaviour
     private PlayerModel _model;
     private PlayerInput _input;
     private WeaponInventory _inventory;
-    private WeaponBase _hiddenGun;
+    private bool _forceEquipped;      // test hooks: behave as if the katana were the active weapon
 
     // Attachment (computed from the model's rest pose)
     private WeaponAim _aim;
@@ -146,6 +144,7 @@ public partial class MeleeCombat : MonoBehaviour
         FindBones();
 
         UpdateKatana(0f);
+        _rig.gameObject.SetActive(false);      // only visible while the katana is the active weapon
     }
 
     void OnDisable() => BlocksFiring = false;
@@ -231,15 +230,17 @@ public partial class MeleeCombat : MonoBehaviour
         bool active = Time.timeScale > 0f && (_input == null || _input.enabled) && _stats != null && _stats.IsAlive;
         float dt = Time.deltaTime;
 
-        if (active) ReadInput(dt);
-        else _holding = false;
-
-        // Switching to another gun while the katana is out: put the katana away at once.
-        if (_hiddenGun != null && _inventory != null && _inventory.ActiveWeapon != _hiddenGun && _state != State.Stowed)
+        // The katana is drawn while it is the active inventory item and put away as soon as anything else is selected.
+        bool equipped = _forceEquipped || (_inventory != null && _inventory.ActiveWeapon is Katana);
+        if (equipped && _state == State.Stowed) BeginDraw();
+        else if (!equipped && _state != State.Stowed)
         {
-            _hiddenGun = null;
             _state = State.Stowed; _stateTime = 0f; _holding = false; _queuedLight = false;
         }
+        _rig.gameObject.SetActive(_state != State.Stowed);
+
+        if (active) ReadInput(dt);
+        else _holding = false;
 
         if (dt > 0f) TickState(dt);
         UpdateGlowAndTrail();
@@ -262,14 +263,19 @@ public partial class MeleeCombat : MonoBehaviour
         var kb = Keyboard.current;
         var gp = Gamepad.current;
 
-        bool down = (kb != null && kb.vKey.wasPressedThisFrame) || (gp != null && gp.rightStickButton.wasPressedThisFrame);
-        bool held = (kb != null && kb.vKey.isPressed) || (gp != null && gp.rightStickButton.isPressed);
-        bool up = (kb != null && kb.vKey.wasReleasedThisFrame) || (gp != null && gp.rightStickButton.wasReleasedThisFrame);
+        var mouse = Mouse.current;
+
+        bool down = (kb != null && kb.vKey.wasPressedThisFrame) || (gp != null && (gp.rightStickButton.wasPressedThisFrame || gp.rightTrigger.wasPressedThisFrame))
+                    || (mouse != null && mouse.leftButton.wasPressedThisFrame);
+        bool held = (kb != null && kb.vKey.isPressed) || (gp != null && (gp.rightStickButton.isPressed || gp.rightTrigger.isPressed))
+                    || (mouse != null && mouse.leftButton.isPressed);
+        bool up = (kb != null && kb.vKey.wasReleasedThisFrame) || (gp != null && (gp.rightStickButton.wasReleasedThisFrame || gp.rightTrigger.wasReleasedThisFrame))
+                  || (mouse != null && mouse.leftButton.wasReleasedThisFrame);
         bool dodge = (kb != null && kb.cKey.wasPressedThisFrame) || (gp != null && gp.buttonEast.wasPressedThisFrame);
 
         if (dodge) TryDodge();
 
-        if (down) PressAttack();
+        if (down && _state != State.Stowed) PressAttack();
         if (_holding)
         {
             if (held) HoldAttack(dt);
@@ -281,8 +287,6 @@ public partial class MeleeCombat : MonoBehaviour
 
     private void PressAttack()
     {
-        _idleTimer = 0f;
-
         if (_state == State.Light || _state == State.Charged)
         {
             _queuedLight = true;       // chain the next slash
@@ -291,7 +295,6 @@ public partial class MeleeCombat : MonoBehaviour
 
         _holding = true;
         _holdTime = 0f;
-        if (_state == State.Stowed || _state == State.Sheathing) BeginDraw();
     }
 
     private void HoldAttack(float dt)
@@ -325,26 +328,8 @@ public partial class MeleeCombat : MonoBehaviour
 
     private void BeginDraw()
     {
-        // Holster the gun
-        if (_inventory != null && _inventory.ActiveWeapon != null)
-        {
-            _hiddenGun = _inventory.ActiveWeapon;
-            _hiddenGun.gameObject.SetActive(false);
-        }
         EnterState(State.Drawing);
         AnimRequested?.Invoke(CharacterAnimator.Draw, drawTime);
-    }
-
-    private void BeginSheathe()
-    {
-        EnterState(State.Sheathing);
-        AnimRequested?.Invoke(CharacterAnimator.Sheathe, drawTime);
-    }
-
-    private void ReturnGun()
-    {
-        if (_hiddenGun != null) _hiddenGun.gameObject.SetActive(true);
-        _hiddenGun = null;
     }
 
     private void TickState(float dt)
@@ -356,22 +341,17 @@ public partial class MeleeCombat : MonoBehaviour
             case State.Drawing:
                 if (_stateTime >= drawTime)
                 {
-                    EnterState(State.Ready); _idleTimer = 0f;
+                    EnterState(State.Ready);
                     if (_queuedLight) { _queuedLight = false; StartLight(); }
                     else if (_holding && _holdTime > tapThreshold) EnterState(State.Charging);
                 }
-                break;
-
-            case State.Ready:
-                _idleTimer += dt;
-                if (!_holding && _idleTimer > sheatheDelay) BeginSheathe();
                 break;
 
             case State.Light:
                 if (!_hitDone && _stateTime >= lightTime * lightHitAt) { _hitDone = true; Strike(lightRange, lightArc, lightDamage, 9f); }
                 if (_stateTime >= lightTime)
                 {
-                    EnterState(State.Ready); _idleTimer = 0f;
+                    EnterState(State.Ready);
                     if (_queuedLight) { _queuedLight = false; StartLight(); }
                 }
                 break;
@@ -384,16 +364,8 @@ public partial class MeleeCombat : MonoBehaviour
                 }
                 if (_stateTime >= chargedTime)
                 {
-                    EnterState(State.Ready); _idleTimer = 0f;
+                    EnterState(State.Ready);
                     if (_queuedLight) { _queuedLight = false; StartLight(); }
-                }
-                break;
-
-            case State.Sheathing:
-                if (_stateTime >= drawTime)
-                {
-                    EnterState(State.Stowed);
-                    ReturnGun();
                 }
                 break;
         }

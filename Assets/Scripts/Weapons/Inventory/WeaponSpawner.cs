@@ -28,7 +28,7 @@ namespace OrbitRush
 [RequireComponent(typeof(PlanetGravity))]
 public class WeaponSpawner : MonoBehaviour
 {
-    public enum WeaponKind { Blaster, SpaceShotgun, PlasmaRifle, GravitySniper, OrbitalLauncher }
+    public enum WeaponKind { Blaster, SpaceShotgun, PlasmaRifle, GravitySniper, OrbitalLauncher, Katana }
 
     static readonly Color[] KindColors =
     {
@@ -37,6 +37,7 @@ public class WeaponSpawner : MonoBehaviour
         new(0.20f, 0.85f, 0.95f), // PlasmaRifle - cyan
         new(0.60f, 0.30f, 0.95f), // GravitySniper - purple
         new(0.30f, 0.90f, 0.35f), // OrbitalLauncher - green
+        new(1.00f, 0.10f, 0.62f), // Katana - pink
     };
 
     [Header("Loadout")]
@@ -45,6 +46,9 @@ public class WeaponSpawner : MonoBehaviour
         WeaponKind.Blaster, WeaponKind.SpaceShotgun, WeaponKind.PlasmaRifle,
         WeaponKind.GravitySniper, WeaponKind.OrbitalLauncher,
     };
+
+    [Tooltip("Place the map's single katana (a melee item). Only the first spawner that runs actually places it.")]
+    public bool includeKatana = true;
 
     [Header("Placement")]
     public int seed = 777;
@@ -61,6 +65,47 @@ public class WeaponSpawner : MonoBehaviour
     public GameObject[] weaponVisualOverrides = new GameObject[5];
 
     private PlanetGravity _planet;
+
+    // ── Standalone templates (vending machine) ────────────────────────────
+
+    private static readonly System.Collections.Generic.Dictionary<WeaponKind, GameObject> ShopTemplates = new System.Collections.Generic.Dictionary<WeaponKind, GameObject>();
+    private static GameObject _shopRoot;
+
+    /// <summary>
+    /// A weapon template that isn't attached to a world pickup: the vending machine hands copies of it to the player
+    /// (WeaponInventory.GiveWeapon). Built once per kind and kept under a hidden root.
+    /// </summary>
+    public static GameObject GetShopTemplate(WeaponKind kind)
+    {
+        if (ShopTemplates.TryGetValue(kind, out var cached) && cached != null) return cached;
+        if (_shopRoot == null) _shopRoot = new GameObject("_ShopWeaponTemplates");
+
+        var template = new GameObject($"{kind}Template");
+        template.transform.SetParent(_shopRoot.transform, false);
+        AddWeaponComponent(template, kind);
+
+        Transform muzzle = WeaponModels.AttachHeldModel(kind.ToString(), template.transform);
+        if (muzzle == null)
+        {
+            var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            visual.name = "Visual";
+            visual.transform.SetParent(template.transform, false);
+            visual.transform.localScale = new Vector3(0.18f, 0.18f, 0.7f);
+            visual.transform.localPosition = new Vector3(0f, 0.2f, 0f);
+            Object.Destroy(visual.GetComponent<Collider>());
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.color = KindColors[(int)kind % KindColors.Length];
+            visual.GetComponent<MeshRenderer>().sharedMaterial = mat;
+        }
+
+        var weapon = template.GetComponent<WeaponBase>();
+        weapon.muzzle = muzzle != null ? muzzle : CreateFallbackMuzzle(template.transform);
+        weapon.projectilePrefab = BuildProjectileTemplate(kind, template.transform);
+        template.SetActive(false);
+
+        ShopTemplates[kind] = template;
+        return template;
+    }
 
     void OnEnable() => Regenerate();
 
@@ -82,13 +127,49 @@ public class WeaponSpawner : MonoBehaviour
         SphereScatter.CancelParentScale(container.transform);
 
         var rng = new System.Random(seed);
-        foreach (var kind in weaponsToScatter)
-            SpawnPickup(kind, container.transform, rng);
+        if (_planet.HasZones)
+        {
+            // A planet with places: each place has its own weapon, so exploring the route means finding something new
+            PlaceByRole("inicio", WeaponKind.Blaster, container.transform, rng);
+            PlaceByRole("combate", WeaponKind.SpaceShotgun, container.transform, rng);
+            PlaceByRole("horda", WeaponKind.PlasmaRifle, container.transform, rng);
+            PlaceByRole("jefe", WeaponKind.GravitySniper, container.transform, rng);
+            PlaceByRole("captura", WeaponKind.OrbitalLauncher, container.transform, rng);
+            if (includeKatana && !KatanaExistsElsewhere()) PlaceByRole("agua", WeaponKind.Katana, container.transform, rng);
+            return;
+        }
+        int copies = _planet.PickupCopies;            // bigger planets get several of each weapon
+        for (int c = 0; c < copies; c++)
+            foreach (var kind in weaponsToScatter)
+                SpawnPickup(kind, container.transform, rng);
+        if (includeKatana && !KatanaExistsElsewhere())
+            SpawnPickup(WeaponKind.Katana, container.transform, rng);
     }
 
-    private void SpawnPickup(WeaponKind kind, Transform parent, System.Random rng)
+    /// <summary>The map has a single katana: only the first spawner to run places it.</summary>
+    private bool KatanaExistsElsewhere()
     {
-        Vector3 dir = SphereScatter.RandomClearDirection(rng, _planet, hoverHeight);
+        foreach (var p in FindObjectsByType<WeaponPickup>(FindObjectsSortMode.None))
+            if (p != null && !p.transform.IsChildOf(transform) && p.name == "Pickup_" + WeaponKind.Katana) return true;
+        return false;
+    }
+
+    private void PlaceByRole(string role, WeaponKind kind, Transform parent, System.Random rng)
+    {
+        var zone = PlanetZoneMath.ByRole(_planet, role);
+        if (zone == null) return;
+        // 5-9 m from the zone's centre, off the path
+        for (int i = 0; i < 40; i++)
+        {
+            Vector3 d = PlanetZoneMath.DirAround(zone.dir, SphereScatter.NextFloat(rng, 5f, 9f), SphereScatter.NextFloat(rng, 0f, 6.28f), _planet.radius);
+            if (!Application.isPlaying || SpawnSafety.IsClear(_planet, d, hoverHeight)) { SpawnPickup(kind, parent, rng, d); return; }
+        }
+        SpawnPickup(kind, parent, rng, PlanetZoneMath.DirAround(zone.dir, 7f, 0f, _planet.radius));
+    }
+
+    private void SpawnPickup(WeaponKind kind, Transform parent, System.Random rng, Vector3? at = null)
+    {
+        Vector3 dir = at ?? SphereScatter.RandomClearDirection(rng, _planet, hoverHeight);
         Vector3 surfacePos = _planet.GetSurfacePoint(dir) + dir * hoverHeight;
         Quaternion rot = Quaternion.FromToRotation(Vector3.up, dir);
 
@@ -112,7 +193,9 @@ public class WeaponSpawner : MonoBehaviour
         template.transform.SetParent(pickupGO.transform, false);
         AddWeaponComponent(template, kind);
 
-        BuildVisual(kind, template.transform, out Transform modelMuzzle);
+        // The katana's held model belongs to MeleeCombat, so its template stays invisible.
+        Transform modelMuzzle = null;
+        if (kind != WeaponKind.Katana) BuildVisual(kind, template.transform, out modelMuzzle);
 
         var weaponBase = template.GetComponent<WeaponBase>();
         weaponBase.muzzle = modelMuzzle != null ? modelMuzzle : CreateFallbackMuzzle(template.transform);
@@ -219,6 +302,7 @@ public class WeaponSpawner : MonoBehaviour
             case WeaponKind.PlasmaRifle:     go.AddComponent<PlasmaRifle>(); break;
             case WeaponKind.GravitySniper:   go.AddComponent<GravitySniper>(); break;
             case WeaponKind.OrbitalLauncher: go.AddComponent<OrbitalLauncher>(); break;
+            case WeaponKind.Katana:          go.AddComponent<Katana>(); break;
         }
     }
 

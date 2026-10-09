@@ -10,7 +10,6 @@ namespace OrbitRush
 ///   • leans into the direction of travel (forward / back) and rolls when strafing
 ///   • bounces and sways in time with its stride while running
 ///   • squashes on landing (more the harder it hits) and stretches on take-off, springing back
-///   • tilts forward under jetpack thrust
 /// All of it is driven by the PlayerController's real velocity, so it always matches what the player does.
 ///
 /// Added automatically by PlayerStats on Start, so no scene or prefab edits are needed. The model is
@@ -100,7 +99,6 @@ public class PlayerModel : MonoBehaviour
                 animate = false;
                 gameObject.AddComponent<PlayerAnimDriver>().Init(Anim, _model);
                 gameObject.AddComponent<WeaponHandFollow>().Init(animator);
-                if (GetComponent<PlayerController>() != null) gameObject.AddComponent<JetpackVisual>().Init(animator);
             }
         }
 
@@ -168,12 +166,10 @@ public class PlayerModel : MonoBehaviour
         float side = Mathf.Clamp(v.x / topSpeed, -1f, 1f);
         float speedNorm = Mathf.Clamp01(_controller.PlanarSpeed / topSpeed);
         bool grounded = _controller.IsGrounded;
-        bool jetting = _controller.IsJetpacking;
 
         // ── Lean & roll (smoothed so direction changes ease in) ──
         float targetLean = forward * leanDegrees;
-        if (jetting) targetLean += 12f;
-        if (!grounded && !jetting) targetLean *= 0.5f;
+        if (!grounded) targetLean *= 0.5f;
         float targetRoll = -side * rollDegrees;
 
         float follow = 1f - Mathf.Exp(-9f * dt);

@@ -207,6 +207,7 @@ public partial class EnemyAI
         if (now <= zombieMeleeRange * 1.35f && Vector3.Dot(transform.forward, to) > 0.2f && target.stats != null)
         {
             target.stats.NoteSource("ZOMBI");
+            target.stats.RegisterHit(transform.position);       // HUD damage-direction arc
             target.stats.TakeDamage(zombieMeleeDamage, null);
             NoiseSystem.Emit(transform.position, Loudness.Walk, gameObject);
             var pc = target.stats.GetComponent<PlayerController>();

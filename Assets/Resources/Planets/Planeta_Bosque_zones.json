@@ -1,0 +1,134 @@
+{
+ "radius": 228.169936252327,
+ "pond": {
+  "dir": [
+   0.20240503975021218,
+   -0.8977026963043837,
+   0.39135925813956984
+  ],
+  "radius": 35.028076171875
+ },
+ "zones": [
+  {
+   "name": "Claro de inicio",
+   "role": "inicio",
+   "dir": [
+    0.29653064872934726,
+    0.18684840298115962,
+    0.9365667347645563
+   ],
+   "clear": 34
+  },
+  {
+   "name": "Aserradero",
+   "role": "combate",
+   "dir": [
+    -0.765086228953734,
+    -0.306650269069671,
+    0.5662231669093495
+   ],
+   "clear": 38
+  },
+  {
+   "name": "Estanque",
+   "role": "agua",
+   "dir": [
+    0.20240503975021218,
+    -0.8977026963043837,
+    0.39135925813956984
+   ],
+   "clear": 0
+  },
+  {
+   "name": "Arboleda gigante",
+   "role": "jefe",
+   "dir": [
+    -0.3717843635011902,
+    -0.5897922349332958,
+    -0.7168831889983214
+   ],
+   "clear": 16
+  },
+  {
+   "name": "Cueva de hongos",
+   "role": "horda",
+   "dir": [
+    0.5425194100639382,
+    0.2424635340097114,
+    -0.8042910694390419
+   ],
+   "clear": 14
+  },
+  {
+   "name": "Mirador de pe\u00f1ascos",
+   "role": "captura",
+   "dir": [
+    0.804621947427309,
+    0.5581096879261093,
+    0.2027241918501741
+   ],
+   "clear": 14
+  }
+ ],
+ "arcs": [
+  {
+   "a": "Claro de inicio",
+   "b": "Aserradero"
+  },
+  {
+   "a": "Aserradero",
+   "b": "Estanque"
+  },
+  {
+   "a": "Estanque",
+   "b": "Arboleda gigante"
+  },
+  {
+   "a": "Arboleda gigante",
+   "b": "Cueva de hongos"
+  },
+  {
+   "a": "Cueva de hongos",
+   "b": "Mirador de pe\u00f1ascos"
+  },
+  {
+   "a": "Mirador de pe\u00f1ascos",
+   "b": "Claro de inicio"
+  },
+  {
+   "a": "Estanque",
+   "b": "Mirador de pe\u00f1ascos"
+  },
+  {
+   "a": "Aserradero",
+   "b": "Arboleda gigante"
+  }
+ ],
+ "pathHalfWidth": 3.2,
+ "anchors": [
+  {
+   "material": "Agua_Estanque",
+   "dir": [
+    0.20240503975021218,
+    -0.8977026963043837,
+    0.39135925813956984
+   ]
+  },
+  {
+   "material": "Hongo_Sombrero",
+   "dir": [
+    0.5425194100639382,
+    0.2424635340097114,
+    -0.8042910694390419
+   ]
+  },
+  {
+   "material": "Rock_1_",
+   "dir": [
+    0.804621947427309,
+    0.5581096879261093,
+    0.2027241918501741
+   ]
+  }
+ ]
+}

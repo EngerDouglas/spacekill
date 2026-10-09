@@ -157,13 +157,15 @@ public class GameManager : MonoBehaviour
             var points = EnemyPointsOn(planet);
             if (points.Count == 0) continue;
 
-            for (int i = 0; i < enemiesPerPlanet; i++)
-            {
-                SpawnEnemyAt(points[Random.Range(0, points.Count)], planet, false);
-                soldiers++;
-            }
-            if (droneEnemyPrefab == null) continue;
-            for (int i = 0; i < dronesPerPlanet; i++)
+            var roster = EnemyRoster.For(planet.planetName);        // null = the default Soldier / Drone
+            if (roster == null || roster.soldiers.Count > 0)
+                for (int i = 0; i < enemiesPerPlanet * planet.EnemyScale; i++)     // bigger planets hold more enemies
+                {
+                    SpawnEnemyAt(points[Random.Range(0, points.Count)], planet, false);
+                    soldiers++;
+                }
+            if (roster == null ? droneEnemyPrefab == null : roster.drones.Count == 0) continue;
+            for (int i = 0; i < dronesPerPlanet * planet.EnemyScale; i++)
             {
                 SpawnEnemyAt(points[Random.Range(0, points.Count)], planet, true);
                 drones++;
@@ -178,8 +180,13 @@ public class GameManager : MonoBehaviour
         if (zombieEnemyPrefab == null || enemySpawnPoints == null || enemySpawnPoints.Length == 0) return;
         var spawner = GetComponent<ZombieSpawner>();
         if (spawner == null) spawner = gameObject.AddComponent<ZombieSpawner>();
-        spawner.Init(zombieEnemyPrefab, enemySpawnPoints, zombiesPerPlanet);
-        Debug.Log($"[Enemies] Zombie horde ready: {zombiesPerPlanet} per planet at the start, more rise when there is noise.");
+        // Bigger planets start with more stragglers, but the total stays well under the horde cap so noise can still summon more
+        var planets = FindObjectsByType<PlanetGravity>(FindObjectsSortMode.None);
+        float avgScale = 0f; foreach (var p in planets) avgScale += p.EnemyScale;
+        avgScale = planets.Length > 0 ? avgScale / planets.Length : 1f;
+        int perPlanet = Mathf.Max(1, Mathf.Min(Mathf.RoundToInt(zombiesPerPlanet * avgScale), spawner.maxZombies / 2 / Mathf.Max(1, planets.Length)));
+        spawner.Init(zombieEnemyPrefab, enemySpawnPoints, perPlanet);
+        Debug.Log($"[Enemies] Zombie horde ready: {perPlanet} per planet at the start, more rise when there is noise.");
     }
 
     /// <summary>Enemy spawn points that sit on the surface of the given planet.</summary>
@@ -197,12 +204,31 @@ public class GameManager : MonoBehaviour
         return result;
     }
 
+    /// <summary>On planets with places the spawn point's role decides: ground enemies stand in combat places, flyers can be anywhere.</summary>
+    private Transform PickPointForKind(Transform point, PlanetGravity planet, bool drone)
+    {
+        if (planet == null || !planet.HasZones || drone) return point;
+        var info = point.GetComponent<SpawnPointInfo>();
+        if (info == null || info.role != "horda") return point;               // not a horde place: fine
+        foreach (var p in EnemyPointsOn(planet))
+        {
+            var i = p.GetComponent<SpawnPointInfo>();
+            if (i != null && i.role != "horda") return p;
+        }
+        return point;
+    }
+
     private GameObject SpawnEnemyAt(Transform point, PlanetGravity planet, bool drone)
     {
-        var prefab = drone && droneEnemyPrefab != null ? droneEnemyPrefab : enemyPrefab;
+        point = PickPointForKind(point, planet, drone);
+        var roster = planet != null ? EnemyRoster.For(planet.planetName) : null;
+        GameObject prefab = roster != null ? EnemyRoster.Pick(drone ? roster.drones : roster.soldiers) : null;
+        if (prefab == null) prefab = drone && droneEnemyPrefab != null ? droneEnemyPrefab : enemyPrefab;
+        var controller = prefab.GetComponent<EnemyController>();
+        bool flies = controller != null && controller.flying;
 
-        // Drones start a little above the ground so their legs don't clip it before they hover up.
-        Vector3 pos = point.position + (drone ? point.up * 2f : Vector3.zero);
+        // Flyers start a little above the ground so their legs don't clip it before they hover up.
+        Vector3 pos = point.position + (flies ? point.up * 2f : Vector3.zero);
         var enemy = Instantiate(prefab, pos, point.rotation);
         // The template is kept inactive (so it never runs on its own); clones must be switched on.
         enemy.SetActive(true);
@@ -210,7 +236,7 @@ public class GameManager : MonoBehaviour
         var home = enemy.GetComponent<EnemyHome>();
         if (home == null) home = enemy.AddComponent<EnemyHome>();
         home.planet = planet;
-        home.isDrone = drone;
+        home.isDrone = drone;          // which slot of the roster it came from (respawns pick again from the same slot)
         return enemy;
     }
 

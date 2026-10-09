@@ -3,7 +3,7 @@ using UnityEngine;
 namespace OrbitRush
 {
 
-/// <summary>A zombie can seize the player: no jetpack and slow movement until they break free by mashing jump.</summary>
+/// <summary>A zombie can seize the player: slow movement until they break free by mashing jump.</summary>
 public partial class PlayerController
 {
     [Header("Zombie grab")]
@@ -22,8 +22,6 @@ public partial class PlayerController
         if (_grabber != null || zombie == null) return false;
         _grabber = zombie;
         _escapePresses = 0;
-        if (_phase == JetpackPhase.Charging) CancelCharge();
-        _stats.LockJetpack(zombie.zombieGrabMaxSeconds);
         if (HUD.Instance != null) HUD.Instance.ShowEvent("AGARRADO — PULSA SALTO PARA SOLTARTE", 2.5f);
         return true;
     }
@@ -33,7 +31,6 @@ public partial class PlayerController
     {
         if (_grabber != zombie) return;
         _grabber = null;
-        _stats.UnlockJetpack();
     }
 
     /// <summary>Test hook: one jump press (as the input callback would register it).</summary>
@@ -48,7 +45,6 @@ public partial class PlayerController
         {
             var z = _grabber;
             _grabber = null;
-            _stats.UnlockJetpack();
             z.ReleaseGrab();
             if (HUD.Instance != null) HUD.Instance.ShowEvent("¡TE HAS SOLTADO!", 1.2f);
             // A shove away so the zombie is not instantly on top of us again

@@ -161,31 +161,27 @@ public class AISelfTest : MonoBehaviour
     {
         Log("--- player 28 m in front of the drone on the ground: it should detect, track and mark ---");
         Place(d, 28f, 0f);
-        int emps = 0;
         float tMark = -1f; float t0 = Time.time;
         for (float t = 0f; t < 22f; t += 0.5f)
         {
             yield return new WaitForSeconds(0.5f);
             if (tMark < 0f && RadarMarks.IsMarked(_ps)) tMark = Time.time - t0;
-            emps = FindObjectsByType<Projectile>(FindObjectsSortMode.None).Count(p => p.empSeconds > 0f);
             if (d == null) { Log("drone gone (exploded?)"); break; }
-            Log($"t={t + 0.5f:F1} state={d.StateName} droneHp={d.Stats.Health:F0}/{d.Stats.maxHealth:F0} shield={d.Stats.Shield:F0} dist={Vector3.Distance(d.transform.position, _pc.transform.position):F0} suspicion={d.Senses.TopSuspicion:F2} vel={d.Controller.Body.linearVelocity.magnitude:F1} free={d.Controller.freeFlight} ctl={d.Controller.controlEnabled} [{d.Senses.Explain(d.Senses.Contacts.FirstOrDefault())}] marked={RadarMarks.IsMarked(_ps)} jetpackLocked={_ps.JetpackLocked} hp={_ps.health:F0} empInFlight={emps}");
+            Log($"t={t + 0.5f:F1} state={d.StateName} droneHp={d.Stats.Health:F0}/{d.Stats.maxHealth:F0} shield={d.Stats.Shield:F0} dist={Vector3.Distance(d.transform.position, _pc.transform.position):F0} suspicion={d.Senses.TopSuspicion:F2} vel={d.Controller.Body.linearVelocity.magnitude:F1} free={d.Controller.freeFlight} ctl={d.Controller.controlEnabled} [{d.Senses.Explain(d.Senses.Contacts.FirstOrDefault())}] marked={RadarMarks.IsMarked(_ps)} hp={_ps.health:F0}");
         }
         Log($"marked after {(tMark < 0 ? "never" : tMark.ToString("F1") + " s")}");
 
-        Log("--- space chase: the player launches with the jetpack toward another planet ---");
+        Log("--- space chase: the player moves to another planet ---");
         PlanetGravity target = GravitySystem.Instance.Planets.Where(p => p != _pc.CurrentPlanet).OrderBy(p => Vector3.Distance(p.transform.position, _pc.transform.position)).First();
         var home = _pc.CurrentPlanet;
         Vector3 toT = (target.transform.position - home.transform.position).normalized;
         Vector3 spot = home.GetSurfacePoint(toT) + toT * 1.2f;
         _rb.position = spot; _rb.linearVelocity = Vector3.zero; _rb.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(Vector3.up, toT).normalized, toT);
-        _ps.jetpackEnergy = 100f;
         yield return new WaitForSeconds(2f);
         // bring the drone close and make it notice the player (it shoots at a drone... we just damage it a little)
         d.Controller.Body.position = _pc.transform.position + _pc.transform.up * 6f - _pc.transform.forward * 14f + _pc.transform.right * 9f;
         d.Controller.Body.linearVelocity = Vector3.zero;
         d.DebugReset(); d.Stats.TakeDamage(0.1f, _ps);
-        d.empPrefab = null; _ps.UnlockJetpack(); _ps.jetpackEnergy = 100f;      // no EMP for this part: we want to see the chase
         yield return new WaitForSeconds(2f);
         // The player jumps to another planet (teleport: the drone must notice it left and follow through open space)
         {
@@ -198,7 +194,7 @@ public class AISelfTest : MonoBehaviour
         {
             yield return new WaitForSeconds(1f);
             if (d == null) { Log("drone gone"); break; }
-            Log($"t={t + 0.5f:F1} player {_pc.Phase} on {_pc.CurrentPlanet?.planetName} | drone state={d.StateName} on {d.Controller.CurrentPlanet?.planetName} freeFlight={d.Controller.freeFlight} vel={d.Controller.Body.linearVelocity.magnitude:F1} spd={d.Controller.speedScale:F2} hp={d.Stats.Health:F0}/{d.Stats.Shield:F0} target={(d.Senses.Target != null)} kin={d.Controller.Body.isKinematic} ctl={d.Controller.controlEnabled} flying={d.Controller.flying} dist={Vector3.Distance(d.transform.position, _pc.transform.position):F0}");
+            Log($"t={t + 0.5f:F1} player on {_pc.CurrentPlanet?.planetName} | drone state={d.StateName} on {d.Controller.CurrentPlanet?.planetName} freeFlight={d.Controller.freeFlight} vel={d.Controller.Body.linearVelocity.magnitude:F1} spd={d.Controller.speedScale:F2} hp={d.Stats.Health:F0}/{d.Stats.Shield:F0} target={(d.Senses.Target != null)} kin={d.Controller.Body.isKinematic} ctl={d.Controller.controlEnabled} flying={d.Controller.flying} dist={Vector3.Distance(d.transform.position, _pc.transform.position):F0}");
         }
     }
 
@@ -222,9 +218,6 @@ public class AISelfTest : MonoBehaviour
             Log($"t={t + 0.5f:F1} state={z.StateName} dist={Vector3.Distance(z.transform.position, _pc.transform.position):F1} hp={_ps.health:F0} grabbed={_pc.IsGrabbed} | {z.Senses.Explain(z.Senses.Contacts.FirstOrDefault())}");
             if (_pc.IsGrabbed)
             {
-                _pc.SimulateJetpack(true); yield return new WaitForSeconds(0.3f);
-                Log($"jetpack while grabbed: phase={_pc.Phase} (should stay Idle)");
-                _pc.SimulateJetpack(false);
                 for (int i = 0; i < 6; i++) { _pc.DebugMashJump(); }
             }
             if (z == null || !z.Stats.IsAlive) break;

@@ -118,6 +118,20 @@ public class EnemyStats : MonoBehaviour, IDamageable
         if (Health <= 0f) Die(attacker);
     }
 
+    /// <summary>Short name for the HUD kill feed: DRON, ZOMBI, ROBOT, or ENEMIGO.</summary>
+    private string FeedLabel()
+    {
+        var home = GetComponent<EnemyHome>();
+        if (home != null && home.isDrone) return "DRON";
+        string n = gameObject.name.ToLowerInvariant();
+        if (n.Contains("zomb")) return "ZOMBI";
+        if (n.Contains("robot") || n.Contains("droid")) return "ROBOT";
+        return "ENEMIGO";
+    }
+
+    /// <summary>Raised once when an enemy dies (killer is null for environment kills). Coin drops listen to it.</summary>
+    public static event System.Action<EnemyStats, PlayerStats> Killed;
+
     private void Die(PlayerStats attacker)
     {
         if (_dead) return;
@@ -128,7 +142,10 @@ public class EnemyStats : MonoBehaviour, IDamageable
         if (attacker != null)
             GameManager.Instance?.RegisterEnemyKill(attacker.PlayerId);
 
+        KillFeed.Raise(attacker != null ? attacker.DisplayLabel : "ENTORNO", FeedLabel(), PlayerStats.WeaponLabel(attacker));
+
         GameManager.Instance?.NotifyEnemyKilled(GetComponent<EnemyHome>());
+        Killed?.Invoke(this, attacker);
 
         // Drones crash and explode on impact (DroneDamageStages) before anything else happens
         var drone = GetComponent<DroneDamageStages>();

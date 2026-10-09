@@ -17,8 +17,6 @@ public class Projectile : MonoBehaviour
     [Header("Physics")]
     public float speed = 90f;
     public bool affectedByGravity = false;
-    [Tooltip("EMP: if > 0, a player it hits has the jetpack jammed for this many seconds.")]
-    public float empSeconds = 0f;
     [Range(0f, 2f)] public float gravityMultiplier = 1f;
     public float lifetime = 8f;
 
@@ -134,7 +132,6 @@ public class Projectile : MonoBehaviour
                 target.RegisterHit(col.contactCount > 0 ? col.GetContact(0).point : transform.position);
                 if (_owner != null) target.NoteSource(ShooterLabel(_owner));
                 target.TakeDamage(damage, _owner != null ? _owner.GetComponent<PlayerStats>() : null);
-                ApplyEmp(target);
                 NotifyHitMarker(target);
             }
         }
@@ -172,13 +169,6 @@ public class Projectile : MonoBehaviour
             target.TakeDamage(damage * falloff, attackerStats);
             NotifyHitMarker(target);
         }
-    }
-
-    private void ApplyEmp(IDamageable target)
-    {
-        if (empSeconds <= 0f || !(target is PlayerStats victim)) return;
-        victim.LockJetpack(empSeconds);
-        if (HUD.Instance != null && victim.GetComponent<PlayerController>() != null) HUD.Instance.ShowEvent("EMP: JETPACK DESACTIVADO", 2f);
     }
 
     private static string ShooterLabel(GameObject owner)

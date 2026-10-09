@@ -62,6 +62,130 @@ public class EnemySpawnSetup : MonoBehaviour
         gm.droneEnemyPrefab = BuildDroneTemplate();
         gm.zombieEnemyPrefab = BuildZombieTemplate();
         gm.enemySpawnPoints = BuildSpawnPoints();
+        BuildRosters();
+    }
+
+    // ── Per-planet rosters ───────────────────────────────────────────────
+    // Bosque:  Battle Droid (rifle) + Spider Walker (heavy, rare) on foot, Earth Elementals as the melee horde, original Guardian Drones in the air.
+    // Desierto: Sweep Drone (a ball that rolls on the ground) as the "soldier"; Rusty Gun Drone (flies, propellers) + the original Guardian Drone in the air; no horde.
+    // Ciudad Destruida keeps the default Elite Soldier / Guardian Drone / zombie (no roster).
+
+    private void BuildRosters()
+    {
+        EnemyRoster.Clear();
+        var defaultDrone = GetComponent<GameManager>()?.droneEnemyPrefab;      // the original Guardian Drone flies on every planet too
+
+        var bosque = new EnemyRoster();
+        var droid = BuildVariant("BosqueDroidTemplate", "Models/Enemies/Enemy_BattleDroid", EnemyKind.Robot,
+            health: 90f, shield: 0f, speed: 4.2f, height: 2.3f, radius: 0.45f, detection: 26f, range: 20f,
+            interval: 1.1f, damage: 14f, bolt: new Color(1f, 0.55f, 0.1f), boltSpeed: 70f);
+        var spider = BuildVariant("BosqueSpiderTemplate", "Models/Enemies/Enemy_SpiderWalker", EnemyKind.Robot,
+            health: 220f, shield: 0f, speed: 3.4f, height: 2.2f, radius: 1.1f, detection: 30f, range: 22f,
+            interval: 0.7f, damage: 10f, bolt: new Color(0.7f, 0.2f, 1f), boltSpeed: 75f);
+        var elemental = BuildVariant("BosqueElementalTemplate", "Models/Enemies/Enemy_Elemental", EnemyKind.Zombie,
+            health: 160f, shield: 0f, speed: 5.6f, height: 2.8f, radius: 0.9f, detection: 24f, range: 3.2f,
+            interval: 1.4f, damage: 22f, bolt: Color.white, boltSpeed: 0f);
+        // Two Battle Droids for every Spider Walker
+        if (droid != null) { bosque.soldiers.Add(droid); bosque.soldiers.Add(droid); }
+        if (spider != null) bosque.soldiers.Add(spider);
+        if (elemental != null) bosque.zombies.Add(elemental);
+        if (defaultDrone != null) bosque.drones.Add(defaultDrone);
+        if (droid != null || elemental != null) EnemyRoster.Set("Bosque", bosque);
+
+        var desierto = new EnemyRoster();
+        // Rusty Gun Drone: flies (propellers turn, glides and tilts); Sweep Drone: a ball that rolls along the ground
+        var rust = BuildVariant("DesiertoRustDroneTemplate", "Models/Enemies/Enemy_RustDrone", EnemyKind.Drone,
+            health: 120f, shield: 60f, speed: 5.5f, height: 1.4f, radius: 1.0f, detection: 36f, range: 28f,
+            interval: 0.35f, damage: 7f, bolt: new Color(1f, 0.45f, 0.1f), boltSpeed: 60f, hover: 6f, rolling: true, stages: false);
+        var sweep = BuildVariant("DesiertoSweepDroneTemplate", "Models/Enemies/Enemy_SweepDrone", EnemyKind.Robot,
+            health: 70f, shield: 0f, speed: 6.5f, height: 1.6f, radius: 0.8f, detection: 30f, range: 22f,
+            interval: 0.45f, damage: 6f, bolt: new Color(0.3f, 0.9f, 1f), boltSpeed: 65f, ball: true);
+        if (sweep != null) desierto.soldiers.Add(sweep);
+        if (rust != null) desierto.drones.Add(rust);
+        if (defaultDrone != null) desierto.drones.Add(defaultDrone);
+        if (rust != null || sweep != null) EnemyRoster.Set("Desierto", desierto);
+    }
+
+    /// <summary>
+    /// One enemy template built from a single-mesh model (Resources/Models/Enemies, pivot at the feet for walkers and at
+    /// the centre for flyers, already scaled to metres). Returns null when the model is missing so the default enemy is used.
+    /// </summary>
+    private GameObject BuildVariant(string templateName, string modelPath, EnemyKind kind, float health, float shield, float speed,
+                                    float height, float radius, float detection, float range, float interval, float damage,
+                                    Color bolt, float boltSpeed, float hover = 0f, bool rolling = false, bool ball = false, bool stages = true)
+    {
+        var model = LoadModel(modelPath);
+        if (model == null) { Debug.LogWarning($"[Enemies] Model '{modelPath}' not found: the default enemy is used."); return null; }
+
+        bool flies = kind == EnemyKind.Drone;
+        var enemy = NewTemplateRoot(templateName);
+        enemy.transform.localScale = Vector3.one * CharacterScale.Enemy;
+
+        var rb = enemy.AddComponent<Rigidbody>();
+        rb.useGravity = false;
+        if (flies) rb.linearDamping = 0.5f;
+
+        var visual = Instantiate(model, enemy.transform);
+        visual.name = "Visual";
+        visual.transform.localRotation = Quaternion.identity;
+        StripColliders(visual);
+
+        Transform muzzle;
+        if (flies)
+        {
+            var col = enemy.AddComponent<SphereCollider>();
+            col.radius = radius;
+            visual.transform.localPosition = Vector3.zero;
+            muzzle = NewChild(enemy.transform, "Muzzle", new Vector3(0f, -0.1f, radius + 0.3f));
+        }
+        else
+        {
+            // Capsule centred on the pivot, feet at local y = -height/2 (the model's pivot is at its feet)
+            var col = enemy.AddComponent<CapsuleCollider>();
+            col.height = height;
+            col.radius = Mathf.Min(radius, height * 0.5f);
+            // A ball's pivot is its centre (it turns about it); other walkers have the pivot at their feet
+            visual.transform.localPosition = ball ? Vector3.zero : new Vector3(0f, -height * 0.5f, 0f);
+            muzzle = NewChild(enemy.transform, "Muzzle", new Vector3(0f, height * 0.15f, radius + 0.35f));
+        }
+
+        var stats = enemy.AddComponent<EnemyStats>();
+        stats.maxHealth = health;
+        stats.maxShield = shield;
+
+        var controller = enemy.AddComponent<EnemyController>();
+        controller.moveSpeed = speed;
+        if (flies) { controller.flying = true; controller.hoverHeight = hover; }
+
+        var ai = enemy.AddComponent<EnemyAI>();
+        ai.kind = kind;
+        if (kind == EnemyKind.Zombie)
+        {
+            controller.aiSpeedFactor = 0.2f;
+            ai.muzzle = muzzle;
+            ai.playerMask = 1;
+            ai.obstructionMask = 0;
+        }
+        else
+        {
+            ConfigureAI(ai, muzzle, detection, range, interval, damage, bolt, boltSpeed);
+            if (flies) { ai.strafeWhileAttacking = true; ai.preferredDistance = 14f; }
+        }
+
+        if (flies)
+        {
+            if (shield > 0f) enemy.AddComponent<EnemyShield>();
+            if (stages) enemy.AddComponent<DroneDamageStages>();                  // smoke, wobble and a crash on death
+            else { var m = enemy.AddComponent<EnemyModelMotion>(); m.rolling = true; }   // glide + spinning propellers
+        }
+        else
+        {
+            var m = enemy.AddComponent<EnemyModelMotion>();
+            m.rolling = rolling; m.rollBall = ball; m.ballRadius = radius;
+        }
+
+        FinishTemplate(enemy, isDrone: flies, healthBarHeight: flies ? radius + 0.9f : height * 0.5f + 0.7f);
+        return enemy;
     }
 
     // ── Elite Soldier ────────────────────────────────────────────────────
@@ -167,10 +291,6 @@ public class EnemySpawnSetup : MonoBehaviour
         ai.kind = EnemyKind.Drone;
         ai.strafeWhileAttacking = true;
         ai.preferredDistance = 14f;
-        // Slow EMP orb: if it hits, the player's jetpack is jammed for a few seconds
-        ai.empPrefab = ProjectileFactory.Create("EMPOrb", new Color(0.55f, 0.3f, 1f), 0.5f,
-            damage: 4f, speed: 15f, lifetime: 5f, affectedByGravity: false, gravityMultiplier: 1f, splashRadius: 0f);
-        ai.empPrefab.transform.SetParent(ai.transform, false);
 
         enemy.AddComponent<EnemyShield>();
         enemy.AddComponent<DroneDamageStages>();
@@ -327,6 +447,7 @@ public class EnemySpawnSetup : MonoBehaviour
 
         foreach (var planet in planets)
         {
+            if (planet.HasZones) { BuildZonePoints(planet, container.transform, rng, points); continue; }
             for (int i = 0; i < spawnPointsPerPlanet; i++)
             {
                 Vector3 dir = SphereScatter.RandomDirection(rng);
@@ -345,6 +466,28 @@ public class EnemySpawnSetup : MonoBehaviour
         }
 
         return points.ToArray();
+    }
+
+    /// <summary>Planets with places: enemies appear inside the combat places (never in the start clearing), tagged with their role.</summary>
+    private void BuildZonePoints(PlanetGravity planet, Transform container, System.Random rng, List<Transform> points)
+    {
+        int n = 0;
+        foreach (var zone in planet.zones)
+        {
+            int count = zone.role == "combate" ? 4 : zone.role == "horda" ? 4 : zone.role == "jefe" ? 3 : zone.role == "captura" ? 3 : 0;
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 dir = PlanetZoneMath.DirAround(zone.dir, SphereScatter.NextFloat(rng, 4f, Mathf.Max(8f, zone.clear * 0.9f)), SphereScatter.NextFloat(rng, 0f, 6.28f), planet.radius);
+                for (int attempt = 0; attempt < 20 && !SpawnSafety.IsClear(planet, dir, 1f); attempt++)
+                    dir = PlanetZoneMath.DirAround(zone.dir, SphereScatter.NextFloat(rng, 4f, Mathf.Max(8f, zone.clear * 0.9f)), SphereScatter.NextFloat(rng, 0f, 6.28f), planet.radius);
+                var point = new GameObject($"SpawnPoint_{planet.planetName}_{n++}");
+                point.transform.SetParent(container, false);
+                point.transform.position = planet.GetSurfacePoint(dir) + dir * 1f;
+                point.transform.rotation = Quaternion.FromToRotation(Vector3.up, dir);
+                point.AddComponent<SpawnPointInfo>().role = zone.role;
+                points.Add(point.transform);
+            }
+        }
     }
 
     private static void DestroyImmediateOrRuntime(Object obj)

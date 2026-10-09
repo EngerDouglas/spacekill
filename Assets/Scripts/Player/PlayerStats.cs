@@ -23,12 +23,6 @@ public class PlayerStats : MonoBehaviour, IDamageable
     public float stamina = 100f;
     public float staminaRegenRate = 15f;
 
-    [Header("Jetpack")]
-    public float maxJetpackEnergy = 100f;
-    public float jetpackEnergy = 100f;
-    public float jetpackRegenRate = 20f;      // (the scene may override this; see PlayerStats.RegenerateJetpack)
-    public float jetpackRegenDelay = 2f;
-
     [Header("Resistance")]
     [Range(0f, 2f)] public float gravityResistance = 1.0f;
 
@@ -47,23 +41,25 @@ public class PlayerStats : MonoBehaviour, IDamageable
     /// <summary>Raised once when health reaches zero (PlayerRespawn listens).</summary>
     public event System.Action Died;
 
+    /// <summary>A hit landed at this world point (projectile contact, or the attacker's position for melee). The HUD turns it into a damage-direction arc.</summary>
+    public event System.Action<Vector3> HitFrom;
+    public void RegisterHit(Vector3 worldPoint) => HitFrom?.Invoke(worldPoint);
+
     private float _shieldRegenTimer;
-    private float _jetpackRegenTimer;
-    private float _jetpackLockUntil;
-
-    /// <summary>Set by PlayerController: the jetpack only recharges while standing on the ground.</summary>
-    public bool JetpackOnGround { get; set; } = true;
-    /// <summary>True while overheated (fuel ran out), jammed by an EMP, or held by a zombie.</summary>
-    public bool JetpackLocked => Time.time < _jetpackLockUntil;
-    public float JetpackLockRemaining => Mathf.Max(0f, _jetpackLockUntil - Time.time);
-    /// <summary>Jetpack blocked after the fuel ran out completely.</summary>
-    public bool JetpackOverheated { get; private set; }
-    public float overheatSeconds = 3f;
-
-    /// <summary>Disables the jetpack for a while (drone EMP, zombie grab...). Longest lock wins.</summary>
-    public void UnlockJetpack() { _jetpackLockUntil = Time.time; }
-    public void LockJetpack(float seconds) => _jetpackLockUntil = Mathf.Max(_jetpackLockUntil, Time.time + seconds);
     private int _lastAttackerId = -1;
+    private PlayerStats _lastAttacker;
+
+    /// <summary>Name shown in the kill feed: "TÚ" for the local player, "JUGADOR n" for the rest.</summary>
+    public string DisplayLabel => CompareTag("Player") ? "TÚ" : $"JUGADOR {PlayerId}";
+
+    /// <summary>Name of the weapon the player is holding right now (empty if none) — for the kill feed.</summary>
+    public static string WeaponLabel(PlayerStats player)
+    {
+        if (player == null) return "";
+        var inv = player.GetComponent<WeaponInventory>();
+        var w = inv != null ? inv.ActiveWeapon : null;
+        return w != null ? w.weaponName : "";
+    }
 
     // Simple sequential ID for local kill attribution / scoreboard display.
     // Not networked — fine for the current single-scene prototype.
@@ -75,7 +71,6 @@ public class PlayerStats : MonoBehaviour, IDamageable
     public float HealthPercent => health / maxHealth;
     public float ShieldPercent => shield / maxShield;
     public float StaminaPercent => stamina / maxStamina;
-    public float JetpackPercent => jetpackEnergy / maxJetpackEnergy;
 
     void Awake()
     {
@@ -108,7 +103,6 @@ public class PlayerStats : MonoBehaviour, IDamageable
     {
         RegenerateShield();
         RegenerateStamina();
-        RegenerateJetpack();
     }
 
     public void TakeDamage(float amount) => TakeDamage(amount, null);
@@ -132,6 +126,7 @@ public class PlayerStats : MonoBehaviour, IDamageable
 
         CameraRig.AddTrauma(Mathf.Clamp01(amount / 60f) * 0.55f);      // a hit rattles the camera a little
         _lastAttackerId = attacker != null ? attacker.PlayerId : -1;
+        _lastAttacker = attacker;
         if (attacker != null && attacker != this) LastDamageSource = $"JUGADOR {attacker.PlayerId}";
 
         if (shield > 0f)
@@ -151,37 +146,22 @@ public class PlayerStats : MonoBehaviour, IDamageable
     public void AddShield(float amount)
         => shield = Mathf.Min(maxShield, shield + amount);
 
-    /// <summary>Restores full health/shield/stamina/jetpack and clears regen timers. Called by PlayerRespawn.</summary>
+    /// <summary>Restores full health/shield/stamina and clears regen timers. Called by PlayerRespawn.</summary>
     public void Respawn()
     {
         LastDamageSource = "";
         health = maxHealth;
         shield = maxShield;
         stamina = maxStamina;
-        jetpackEnergy = maxJetpackEnergy;
         _shieldRegenTimer = 0f;
-        _jetpackRegenTimer = 0f;
-        _jetpackLockUntil = 0f; JetpackOverheated = false;
         _lastAttackerId = -1;
+        _lastAttacker = null;
     }
 
     public bool UseStamina(float amount)
     {
         if (stamina < amount) return false;
         stamina -= amount;
-        return true;
-    }
-
-    public bool UseJetpack(float amount)
-    {
-        if (JetpackLocked || jetpackEnergy <= 0.001f) return false;
-        jetpackEnergy = Mathf.Max(0f, jetpackEnergy - amount);
-        _jetpackRegenTimer = Mathf.Min(jetpackRegenDelay, 1f);      // recharge starts one second after the last use
-        if (jetpackEnergy <= 0.001f)
-        {
-            JetpackOverheated = true;                                // drained completely: it overheats and jams
-            LockJetpack(overheatSeconds);
-        }
         return true;
     }
 
@@ -194,20 +174,16 @@ public class PlayerStats : MonoBehaviour, IDamageable
     private void RegenerateStamina()
         => stamina = Mathf.Min(maxStamina, stamina + staminaRegenRate * Time.deltaTime);
 
-    private void RegenerateJetpack()
-    {
-        if (JetpackOverheated && !JetpackLocked) JetpackOverheated = false;
-        if (!JetpackOnGround) return;
-        if (DamageRules.TickDelay(ref _jetpackRegenTimer, Time.deltaTime)) return;
-        jetpackEnergy = DamageRules.Regen(jetpackEnergy, maxJetpackEnergy, Mathf.Max(jetpackRegenRate, 35f), Time.deltaTime);
-    }
-
     private void OnDeath()
     {
         Debug.Log($"{gameObject.name} died.");
 
         if (_lastAttackerId >= 0)
             GameManager.Instance?.RegisterKill(_lastAttackerId, PlayerId);
+
+        string killer = _lastAttacker != null ? _lastAttacker.DisplayLabel
+                      : string.IsNullOrEmpty(LastDamageSource) ? "ENTORNO" : LastDamageSource;
+        KillFeed.Raise(killer, DisplayLabel, WeaponLabel(_lastAttacker));
 
         Died?.Invoke();
     }

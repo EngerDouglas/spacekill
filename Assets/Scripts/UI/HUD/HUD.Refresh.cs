@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,7 +15,14 @@ public partial class HUD
     {
         var player = GameObject.FindWithTag("Player");
         if (player == null) return;
-        _stats      = player.GetComponent<PlayerStats>();
+
+        var stats = player.GetComponent<PlayerStats>();
+        if (stats != _stats)
+        {
+            if (_stats != null) _stats.HitFrom -= OnPlayerHit;
+            _stats = stats;
+            if (_stats != null) _stats.HitFrom += OnPlayerHit;
+        }
         _inventory  = player.GetComponent<WeaponInventory>();
         _controller = player.GetComponent<PlayerController>();
         _playerBody = player.GetComponent<Rigidbody>();
@@ -25,16 +31,18 @@ public partial class HUD
     void RefreshHUD()
     {
         if (_stats == null) FindPlayer();
-        if (_healthText == null) return;      // art panels failed to load (HudArt not imported as Sprites): nothing to refresh
 
         RefreshVitals();
         RefreshWeapon();
-        RefreshSlots();
         RefreshPlanet();
         RefreshMatch();
         RefreshKills();
+        RefreshCoins();
+        RefreshFeed();
         RefreshCrosshair();
         RefreshVignette();
+        RefreshDamageArcs();
+        RefreshShieldWarning();
         RefreshRadar();
         RefreshBanner();
     }
@@ -45,29 +53,42 @@ public partial class HUD
     {
         if (_stats == null) return;
 
-        SetBar(_health, _stats.HealthPercent);
-        SetBar(_shield, _stats.ShieldPercent);
-        SetBar(_jet, _stats.JetpackPercent);
-        SetBar(_stamina, _stats.StaminaPercent);
-        if (_controller != null) SetBar(_dash, 1f - _controller.DashCooldownPercent);
-        SetBar(_dodge, _meleeDodge);
-        SetBar(_katana, _meleeOut ? Mathf.Max(0.04f, _meleeCharge) : 0f);
+        // Shield: six segments; the whole row turns red when it is low
+        float sp = _stats.ShieldPercent;
+        bool low = sp <= 0.33f;
+        Color sc = low ? Alert : Cyan;
+        for (int i = 0; i < _shieldFill.Length; i++)
+        {
+            _shieldFill[i].anchorMax = new Vector2(Mathf.Clamp01(sp * 6f - i), 1f);
+            _shieldFillImg[i].color = sc;
+        }
+        _escudoText.text = $"ESCUDO  {Mathf.RoundToInt(sp * 100f)}%";
+        _escudoText.color = low ? Alert : Cyan;
 
-        _healthText.text = Mathf.CeilToInt(_stats.health).ToString();
-        _shieldText.text = (!_art && _stats.shield > 0.5f) ? Mathf.CeilToInt(_stats.shield).ToString() : "";
-
-        // Health: green → yellow → red as it drops; pulses when critical
+        // Health: white, pulsing red when critical
         float hp = _stats.HealthPercent;
-        Color hc = hp > 0.5f ? Color.Lerp(Yellow, Green, (hp - 0.5f) * 2f) : Color.Lerp(Red, Yellow, hp * 2f);
-        if (hp < 0.25f) hc = Color.Lerp(hc, White, 0.35f * (0.5f + 0.5f * Mathf.Sin(Time.time * 9f)));
-        _health.fillImage.color = hc;
-        _healthText.color = hp < 0.25f ? Red : White;
+        SetBar(_health, hp);
+        _health.fillImage.color = hp < 0.30f ? Color.Lerp(Alert, White, 0.5f + 0.5f * Mathf.Sin(Time.time * 9f)) : White;
+        _vidaText.text = $"VIDA  {Mathf.CeilToInt(_stats.health)}";
+        _vidaText.color = hp < 0.30f ? Alert : White;
 
-        // Jetpack bar flashes when almost empty
-        Color jetColor = _art ? Pink : Cyan;   // the supplied art draws the jetpack bar in pink
-        _jet.fillImage.color = _stats.JetpackPercent < 0.2f
-            ? Color.Lerp(jetColor, Muted, Mathf.PingPong(Time.time * 4f, 1f))
-            : jetColor;
+        // Energy (stamina). The jetpack row is a placeholder: no jetpack exists in the game yet.
+        float st = _stats.StaminaPercent;
+        SetBar(_energy, st);
+        _energyValue.text = Mathf.RoundToInt(st * 100f).ToString();
+        SetBar(_jetpack, 0f);
+        _jetpackValue.text = "—";
+
+        // Dash / dodge: the ring refills while the ability recharges
+        if (_controller != null) SetAbility(_dashRing, _dashKey, 1f - _controller.DashCooldownPercent);
+        SetAbility(_dodgeRing, _dodgeKey, _meleeDodge);
+    }
+
+    static void SetAbility(Image ring, Text key, float ready)
+    {
+        ready = Mathf.Clamp01(ready);
+        ring.fillAmount = ready;
+        key.color = ready >= 0.999f ? Cyan : new Color(1f, 1f, 1f, 0.40f);
     }
 
     void SetBar(Bar b, float value)
@@ -92,38 +113,27 @@ public partial class HUD
     {
         if (_inventory == null) return;
 
-        string qKey = _art ? "" : "<color=#FF1A9E>[Q]</color> ", fKey = _art ? "" : "<color=#FFCC1A>[F]</color> ";
-        _grenadeQ.text = $"{qKey}{GrenadeLabel(_inventory.equippedGrenade, "Granada")}  <b>x{_inventory.grenadeCount}</b>";
-        _grenadeF.text = $"{fKey}{GrenadeLabel(_inventory.specialBomb, "Especial")}  <b>x{_inventory.specialCount}</b>";
+        _grenadeQ.text = $"<color=#4FD6FF>Q</color>  {GrenadeLabel(_inventory.equippedGrenade, "Granada")}  ×{_inventory.grenadeCount}";
+        _grenadeF.text = $"<color=#4FD6FF>F</color>  {GrenadeLabel(_inventory.specialBomb, "Especial")}  ×{_inventory.specialCount}";
 
         var weapon = _inventory.ActiveWeapon;
-        if (weapon == null)
+        if (weapon == null || weapon.IsMelee)
         {
-            _weaponName.text = "SIN ARMA";
-            _ammoCurrent.text = "—";
-            _ammoCurrent.color = Muted;
-            _ammoMax.text = "";
-            _reloadGroup.SetActive(false);
+            _weaponName.text = weapon == null ? "SIN ARMA" : weapon.weaponName.ToUpper();
+            IdleAmmo("—");
             _heatGroup.SetActive(false);
             return;
         }
 
-        _weaponName.text = weapon.weaponName.ToUpper();
-        _ammoCurrent.text = weapon.currentAmmo.ToString();
-        _ammoMax.text = "/ " + weapon.maxAmmo;
-        float ammoPct = weapon.maxAmmo > 0 ? (float)weapon.currentAmmo / weapon.maxAmmo : 0f;
-        _ammoCurrent.color = ammoPct <= 0.25f ? Color.Lerp(Pink, White, 0.5f + 0.5f * Mathf.Sin(Time.time * 10f)) : White;
-
-        bool reloading = weapon.IsReloading;
-        _reloadGroup.SetActive(reloading);
-        if (reloading) { _reload.shown = weapon.ReloadProgress; _reload.fill.anchorMax = new Vector2(_reload.shown, 1f); }
+        if (_weaponName.text != weapon.weaponName.ToUpper()) _weaponName.text = weapon.weaponName.ToUpper();
+        AnimateAmmo(weapon);          // number, pips, reload label (HUD.Ammo.cs)
 
         var plasma = weapon as PlasmaRifle;
-        _heatGroup.SetActive(plasma != null && !reloading);
+        _heatGroup.SetActive(plasma != null && !weapon.IsReloading);
         if (plasma != null)
         {
             SetBar(_heat, plasma.HeatPercent);
-            _heat.fillImage.color = plasma.IsOverheated ? Color.Lerp(Red, White, Mathf.PingPong(Time.time * 6f, 1f)) : new Color(1f, 0.45f, 0.05f);
+            _heat.fillImage.color = plasma.IsOverheated ? Color.Lerp(Alert, White, Mathf.PingPong(Time.time * 6f, 1f)) : White;
         }
     }
 
@@ -142,42 +152,6 @@ public partial class HUD
         return sb.ToString();
     }
 
-    void RefreshSlots()
-    {
-        if (_inventory == null) return;
-        if (_builtSlotCount != _inventory.maxWeapons) BuildSlotBoxes(_inventory.maxWeapons);
-
-        var weapons = _inventory.Weapons;
-        int active = _inventory.ActiveIndex;
-        for (int i = 0; i < _slotBg.Length; i++)
-        {
-            bool filled = i < weapons.Count;
-            bool isActive = filled && i == active;
-            _slotName[i].text = filled ? ShortName(weapons[i].weaponName) : "";
-            _slotName[i].color = isActive ? White : Muted;
-            _slotKey[i].color = isActive ? White : Cyan;
-
-            // Re-tessellate the frame only when its look actually changes (0 = empty, 1 = owned, 2 = active)
-            int state = isActive ? 2 : (filled ? 1 : 0);
-            if (state == _slotState[i]) continue;
-            _slotState[i] = state;
-
-            switch (state)
-            {
-                case 2:  _slotBg[i].SetColors(Pink, Color.Lerp(NavyDeep, Pink, 0.50f), Color.Lerp(NavyDeep, Pink, 0.18f)); break;
-                case 1:  _slotBg[i].SetColors(Cyan, new Color(0.07f, 0.09f, 0.24f, 0.90f), new Color(0.02f, 0.03f, 0.10f, 0.92f)); break;
-                default: _slotBg[i].SetColors(new Color(0.35f, 0.40f, 0.60f, 0.55f), new Color(0.05f, 0.06f, 0.16f, 0.45f), new Color(0.02f, 0.03f, 0.10f, 0.45f)); break;
-            }
-        }
-    }
-
-    static string ShortName(string name)
-    {
-        if (string.IsNullOrEmpty(name)) return "?";
-        name = name.ToUpper();
-        return name.Length <= 11 ? name : name.Substring(0, 10) + ".";
-    }
-
     // ── Planet / match / kills ────────────────────────────────────────────
 
     void RefreshPlanet()
@@ -187,7 +161,7 @@ public partial class HUD
         if (planet == null) return;
 
         _planetName.text = planet.planetName.ToUpper();
-        _gravityText.text = $"GRAVEDAD {planet.gravityStrength:F1}  ·  {planet.biome.ToString().ToUpper()}";
+        _gravityText.text = $"Gravedad {planet.gravityStrength:F1}  ·  {planet.biome}";
     }
 
     void RefreshMatch()
@@ -197,30 +171,52 @@ public partial class HUD
 
         float t = Mathf.Max(0f, gm.MatchTimeRemaining);
         _timerText.text = $"{Mathf.FloorToInt(t / 60f):00}:{Mathf.FloorToInt(t % 60f):00}";
-        _timerText.color = t < 30f ? Color.Lerp(Red, White, Mathf.PingPong(Time.time * 2f, 1f)) : White;
+        _timerText.color = t < 30f ? Color.Lerp(Alert, White, Mathf.PingPong(Time.time * 2f, 1f)) : White;
 
         switch (gm.gameMode)
         {
-            case GameManager.GameMode.TeamDeathmatch: _modeText.text = "EQUIPOS · ROSA vs CIAN"; break;
+            case GameManager.GameMode.TeamDeathmatch: _modeText.text = "EQUIPOS  ·  ROSA vs CIAN"; break;
             case GameManager.GameMode.PlanetCapture:  _modeText.text = "CAPTURA DE PLANETAS"; break;
             default:                                  _modeText.text = "TODOS CONTRA TODOS"; break;
         }
 
         bool teamMode = gm.IsTeamMode;
-        if (_teamGroup.activeSelf != teamMode) _teamGroup.SetActive(teamMode);
+        if (_teamText.gameObject.activeSelf != teamMode) _teamText.gameObject.SetActive(teamMode);
         if (teamMode)
-        {
-            _pinkScore.text = gm.GetTeamScore(Team.Pink).ToString();
-            _cyanScore.text = gm.GetTeamScore(Team.Cyan).ToString();
-        }
+            _teamText.text = $"<color=#FF2D9A>ROSA {gm.GetTeamScore(Team.Pink)}</color>   ·   <color=#4FD6FF>CIAN {gm.GetTeamScore(Team.Cyan)}</color>";
     }
 
     void RefreshKills()
     {
         var gm = GameManager.Instance;
         if (gm == null || _stats == null) return;
-        _killsText.text = gm.GetKills(_stats.PlayerId).ToString();
-        _pveText.text = gm.GetPveScore(_stats.PlayerId).ToString();
+        _statsText.text = $"{gm.GetKills(_stats.PlayerId)} bajas   ·   {gm.GetPveScore(_stats.PlayerId)} enemigos";
+    }
+
+    // ── Kill feed ─────────────────────────────────────────────────────────
+
+    void OnKill(string killer, string victim, string weapon)
+    {
+        string line = string.IsNullOrEmpty(weapon) ? $"{killer}  →  {victim}" : $"{killer}  →  {victim}      {weapon}";
+        _feed.Insert(0, new FeedLine { text = line, mine = killer == "TÚ", age = 0f });
+        while (_feed.Count > FeedLines) _feed.RemoveAt(_feed.Count - 1);
+    }
+
+    void RefreshFeed()
+    {
+        float dt = Time.unscaledDeltaTime;
+        foreach (var f in _feed) f.age += dt;
+        _feed.RemoveAll(f => f.age > FeedLife);
+
+        for (int i = 0; i < _feedTexts.Length; i++)
+        {
+            if (i >= _feed.Count) { _feedTexts[i].text = ""; continue; }
+            var f = _feed[i];
+            Color c = f.mine ? White : Soft;
+            c.a *= Mathf.Clamp01((FeedLife - f.age) / 1.5f);      // fade out over the last 1.5 s
+            _feedTexts[i].text = f.text;
+            _feedTexts[i].color = c;
+        }
     }
 
     // ── Crosshair ─────────────────────────────────────────────────────────
@@ -229,13 +225,10 @@ public partial class HUD
     {
         // Gap grows with movement speed and with each shot, then eases back.
         float speed = _playerBody != null ? _playerBody.linearVelocity.magnitude : 0f;
-        var weapon = _inventory != null ? _inventory.ActiveWeapon : null;
-        if (weapon != null)
-        {
-            if (_lastAmmo >= 0 && weapon.currentAmmo < _lastAmmo) _kick = Mathf.Min(_kick + 9f, 18f);
-            _lastAmmo = weapon.currentAmmo;
-        }
-        _kick = Mathf.MoveTowards(_kick, 0f, Time.unscaledDeltaTime * 40f);
+        // Each shot kicks the crosshair open (impulse from OnWeaponFired); a damped spring brings it back with a soft rebound
+        float kdt = Time.unscaledDeltaTime;
+        _kickVel += (-_kick * 220f - _kickVel * 16f) * kdt;
+        _kick = Mathf.Clamp(_kick + _kickVel * kdt, 0f, 20f);
 
         float targetGap = (9f + Mathf.Clamp(speed, 0f, 14f) * 0.7f) * Mathf.Lerp(1f, 0.45f, AimZoom) + _kick;
         _crossGap = Mathf.Lerp(_crossGap, targetGap, Time.unscaledDeltaTime * 14f);
@@ -246,17 +239,18 @@ public partial class HUD
         _ticks[3].anchoredPosition = new Vector2(_crossGap + 6f, 0);
 
         // Red when an enemy is under the crosshair
-        Color c = IsAimingAtEnemy() ? Red : White;
+        bool enemy = IsAimingAtEnemy();
+        Color c = enemy ? Alert : White;
         c.a = 0.92f;
         for (int i = 0; i < 4; i++) _tickImages[i].color = c;
-        _centerDot.color = c;
+        _centerDot.color = enemy ? Alert : Cyan;
 
         // Hit marker
         if (_hitTimer > 0f)
         {
             _hitTimer -= Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(_hitTimer / _hitDuration);
-            var hc = _hitWasKill ? Pink : White; hc.a = k;
+            var hc = _hitWasKill ? Alert : White; hc.a = k;
             foreach (var img in _hitImages) img.color = hc;
             _hitMarker.localScale = Vector3.one * (_hitWasKill ? 1.5f : 1f) * (1.25f - 0.25f * k);
             if (_hitTimer <= 0f) _hitMarker.gameObject.SetActive(false);
@@ -293,6 +287,55 @@ public partial class HUD
         _hitWasKill = kill;
         _hitTimer = _hitDuration = kill ? 0.32f : 0.18f;
         _hitMarker.gameObject.SetActive(true);
+    }
+
+    // ── Damage direction + shield warning ─────────────────────────────────
+
+    /// <summary>The player was hit at (or from) this world point: light a red arc around the crosshair pointing that way.</summary>
+    void OnPlayerHit(Vector3 worldPoint)
+    {
+        if (_stats == null || _damageArcs == null) return;
+
+        Vector3 rel = worldPoint - _stats.transform.position;
+        float x = Vector3.Dot(rel, _stats.transform.right);
+        float y = Vector3.Dot(rel, _stats.transform.forward);
+        float ang = (x * x + y * y) < 1e-4f ? 0f : Mathf.Atan2(x, y) * Mathf.Rad2Deg;   // 0 = straight ahead, clockwise
+
+        // Reuse an arc already pointing this way; otherwise take the one that has faded the most.
+        DamageArc use = null;
+        foreach (var a in _damageArcs)
+            if (a.life > 0f && Mathf.Abs(Mathf.DeltaAngle(a.angle, ang)) < 25f) { use = a; break; }
+        if (use == null)
+        {
+            float least = float.MaxValue;
+            foreach (var a in _damageArcs) if (a.life < least) { least = a.life; use = a; }
+        }
+        use.angle = ang;
+        use.life = 1f;
+        use.pivot.localRotation = Quaternion.Euler(0f, 0f, -ang);
+    }
+
+    void RefreshDamageArcs()
+    {
+        if (_damageArcs == null) return;
+        foreach (var a in _damageArcs)
+        {
+            if (a.life <= 0f) continue;
+            a.life = Mathf.MoveTowards(a.life, 0f, Time.unscaledDeltaTime / 1.2f);
+            a.arc.color = new Color(Alert.r, Alert.g, Alert.b, a.life * a.life * 0.95f);
+        }
+    }
+
+    void RefreshShieldWarning()
+    {
+        bool show = _stats != null && _stats.IsAlive && _stats.ShieldPercent <= 0.33f;
+        if (_shieldWarn.activeSelf != show) _shieldWarn.SetActive(show);
+        if (!show) return;
+
+        _shieldWarnText.text = _stats.ShieldPercent <= 0.001f ? "ESCUDO ROTO" : "ESCUDO BAJO";
+        Color c = Alert; c.a = 0.65f + 0.35f * Mathf.Sin(Time.time * 8f);
+        _shieldWarnText.color = c;
+        _shieldWarnIcon.color = c;
     }
 
     // ── Damage vignette ───────────────────────────────────────────────────
@@ -342,12 +385,13 @@ public partial class HUD
             if (outside && rel.magnitude > RadarRange * 2.2f) continue;   // far away: don't clutter the rim
 
             var dot = GetRadarDot(used++);
-            bool drone = e.GetComponent<EnemyHome>() != null && e.GetComponent<EnemyHome>().isDrone;
-            Color col = drone ? Yellow : Red;
+            var home = e.GetComponent<EnemyHome>();
+            bool drone = home != null && home.isDrone;
+            Color col = drone ? Amber : Alert;
             col.a = outside ? 0.45f : 1f;
             dot.color = col;
             dot.rectTransform.anchoredPosition = v * _radarRadius * 0.96f;
-            dot.rectTransform.sizeDelta = Vector2.one * (drone ? 12f : 10f);
+            dot.rectTransform.sizeDelta = Vector2.one * (drone ? 9f : 8f);
             dot.gameObject.SetActive(true);
         }
         for (int i = used; i < _radarDots.Count; i++) _radarDots[i].gameObject.SetActive(false);
@@ -357,7 +401,7 @@ public partial class HUD
     {
         while (_radarDots.Count <= index)
         {
-            var img = Box(_radar, "Dot" + _radarDots.Count, CC, CC, Vector2.zero, new Vector2(10, 10), Red);
+            var img = Box(_radar, "Dot" + _radarDots.Count, CC, CC, Vector2.zero, new Vector2(8, 8), Alert);
             img.sprite = Circle();
             _radarDots.Add(img);
         }

@@ -1,16 +1,17 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace OrbitRush
 {
 
-/// <summary>HUD construction: builds every panel, bar, slot, crosshair and vignette in code.</summary>
+/// <summary>HUD construction: builds every widget in code (Apex layout, see the class summary in HUD.cs).</summary>
 public partial class HUD
 {
     // ══════════════════════════════════════════════════════════════════════
     // BUILD
     // ══════════════════════════════════════════════════════════════════════
+
+    const float Margin = 56f;
 
     void BuildHUD()
     {
@@ -28,339 +29,169 @@ public partial class HUD
             gameObject.AddComponent<GraphicRaycaster>();
 
         BuildVignette();       // first = drawn behind everything else
-        BuildPlanetAndRadar();
+        BuildRadarAndPlanet();
         BuildTopCenter();
         BuildTopRight();
+        BuildCoins();
         BuildVitals();
-        BuildWeaponCard();
-        BuildSlots();
+        BuildEnergy();
+        BuildWeapon();
         BuildBanner();
         BuildCrosshair();
+        BuildDamageArcs();
+        BuildShieldWarning();
+
+        // The weapon wheel builds itself under this canvas, drawn on top of everything above.
+        if (GetComponent<WeaponWheel>() == null) gameObject.AddComponent<WeaponWheel>();
+        if (GetComponent<ShopPanel>() == null) gameObject.AddComponent<ShopPanel>();     // vending machine (E)
     }
 
+    // ── Top-left: radar + planet ──────────────────────────────────────────
 
-    // ══════════════════════════════════════════════════════════════════════
-    // ART PANELS (Resources/HudArt/*.png — the supplied PlanetaryWar HUD pack with its numbers erased;
-    // the live values are drawn on top as text). Falls back to the code-built neon panels if the art is missing.
-    // ══════════════════════════════════════════════════════════════════════
-
-    const float ArtScale = 0.7f;           // PNG pixels -> canvas units
-    private bool _art;
-    private float _radarRadius = RadarRadius;
-
-    static Sprite ArtSprite(string name) => Resources.Load<Sprite>(ResourcePaths.HudArtFolder + name);
-    static Vector2 At(float x, float y) => new Vector2(x * ArtScale, -y * ArtScale);
-
-    RectTransform ArtPanel(string name, Sprite sprite, Vector2 anchor, Vector2 pivot, Vector2 pos)
+    void BuildRadarAndPlanet()
     {
-        var rt = NewRect(name, transform, anchor, pivot, pos, sprite.rect.size * ArtScale);
-        var img = rt.gameObject.AddComponent<Image>();
-        img.sprite = sprite; img.raycastTarget = false;
-        return rt;
+        _radar = NewRect("Radar", transform, TL, TL, new Vector2(Margin, -Margin), new Vector2(200f, 200f));
+        _radarRadius = RadarRadius;
+
+        var back = _radar.gameObject.AddComponent<Image>();
+        back.sprite = Circle(); back.color = new Color(Ink.r, Ink.g, Ink.b, 0.40f); back.raycastTarget = false;
+
+        var outer = Box(_radar, "Ring", CC, CC, Vector2.zero, new Vector2(200f, 200f), new Color(1f, 1f, 1f, 0.40f));
+        outer.sprite = Ring(0.015f);
+        var inner = Box(_radar, "RingInner", CC, CC, Vector2.zero, new Vector2(100f, 100f), new Color(1f, 1f, 1f, 0.13f));
+        inner.sprite = Ring(0.03f);
+        var me = Box(_radar, "Player", CC, CC, Vector2.zero, new Vector2(14f, 14f), White);
+        me.sprite = Triangle();
+
+        _planetName  = Txt(transform, "-", 15, White, TextAnchor.UpperLeft, TL, TL, new Vector2(Margin, -272f), new Vector2(440f, 20f), _fontSemi);
+        _gravityText = Txt(transform, "", 13, Soft, TextAnchor.UpperLeft, TL, TL, new Vector2(Margin, -296f), new Vector2(440f, 18f));
     }
-
-    /// <summary>Text placed in PNG pixel coordinates (top-left of the panel = 0,0).</summary>
-    Text ArtLabel(RectTransform panel, string text, int size, Color color, TextAnchor align, float x, float y, float w, float h,
-                  FontStyle style = FontStyle.BoldAndItalic, int minSize = 0)
-    {
-        Vector2 pivot = align == TextAnchor.MiddleLeft ? ML : align == TextAnchor.MiddleRight ? MR : CC;
-        float px = align == TextAnchor.MiddleLeft ? x : align == TextAnchor.MiddleRight ? x + w : x + w * 0.5f;
-        var rt = NewRect("Text", panel, TL, pivot, At(px, y + h * 0.5f), new Vector2(w, h) * ArtScale);
-        var t = rt.gameObject.AddComponent<Text>();
-        t.font = _font; t.text = text; t.fontSize = size; t.fontStyle = style; t.color = color; t.alignment = align;
-        t.horizontalOverflow = HorizontalWrapMode.Overflow; t.verticalOverflow = VerticalWrapMode.Overflow;
-        t.supportRichText = true; t.raycastTarget = false;
-        if (minSize > 0)      // shrink to fit the box instead of spilling over the art
-        {
-            t.resizeTextForBestFit = true; t.resizeTextMinSize = minSize; t.resizeTextMaxSize = size;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Truncate;
-        }
-        var sh = rt.gameObject.AddComponent<Shadow>();
-        sh.effectColor = new Color(0f, 0f, 0f, 0.7f); sh.effectDistance = new Vector2(1.5f, -1.5f);
-        return t;
-    }
-
-    /// <summary>Rounded bar placed in PNG pixel coordinates: a dark track plus a fill (and optionally a damage trail).</summary>
-    Bar ArtBar(RectTransform panel, string name, float x, float y, float w, float h, Color color, bool ghost)
-    {
-        var size = new Vector2(w, h) * ArtScale;
-        var track = NewRect(name, panel, TL, TL, At(x, y), size);
-        return MakePillBar(track, size.y, color, ghost, 0.95f);
-    }
-
-    Bar MakePillBar(RectTransform track, float height, Color color, bool ghost, float trackAlpha)
-    {
-        var tImg = track.gameObject.AddComponent<Image>();
-        tImg.sprite = Pill(); tImg.type = Image.Type.Sliced; tImg.pixelsPerUnitMultiplier = 32f / height;
-        tImg.color = new Color(0.03f, 0.03f, 0.10f, trackAlpha); tImg.raycastTarget = false;
-        var bar = new Bar();
-        if (ghost) bar.ghost = PillFill(track, "Trail", new Color(1f, 0.92f, 0.7f, 0.65f), height);
-        var fill = PillFill(track, "Fill", color, height);
-        bar.fill = fill; bar.fillImage = fill.GetComponent<Image>();
-        return bar;
-    }
-
-    static RectTransform PillFill(RectTransform track, string name, Color color, float height)
-    {
-        var rt = NewRect(name, track, CC, CC, Vector2.zero, Vector2.zero);
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
-        var img = rt.gameObject.AddComponent<Image>();
-        img.sprite = Pill(); img.type = Image.Type.Sliced; img.pixelsPerUnitMultiplier = 32f / height;
-        img.color = color; img.raycastTarget = false;
-        return rt;
-    }
-
-    static Sprite _pill;
-    static Sprite Pill()
-    {
-        if (_pill != null) return _pill;
-        const int w = 64, h = 32;
-        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { name = "HudPill", wrapMode = TextureWrapMode.Clamp };
-        var px = new Color32[w * h];
-        float r = h * 0.5f;
-        for (int y = 0; y < h; y++)
-            for (int x = 0; x < w; x++)
-            {
-                float cx = Mathf.Clamp(x + 0.5f, r, w - r), cy = h * 0.5f;
-                float d = Mathf.Sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy));
-                px[y * w + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(r - d + 0.5f) * 255f));
-            }
-        tex.SetPixels32(px); tex.Apply();
-        _pill = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(16, 0, 16, 0));
-        return _pill;
-    }
-
-    void BuildPlanetAndRadar()
-    {
-        var loc = ArtSprite("Ubicacion"); var rad = ArtSprite("Radar");
-        if (loc == null || rad == null) return;
-        _art = true;
-
-        var p = ArtPanel("PlanetPanel", loc, TL, TL, new Vector2(30, -30));
-        _planetName = ArtLabel(p, "-", 34, White, TextAnchor.MiddleLeft, 58, 52, 410, 62, FontStyle.BoldAndItalic, 16);
-        _gravityText = ArtLabel(p, "", 18, Muted, TextAnchor.MiddleLeft, 78, 114, 360, 36, FontStyle.Bold);
-
-        var r = ArtPanel("RadarFrame", rad, TL, TL, new Vector2(30, -30 - loc.rect.height * ArtScale - 10));
-        // Radar disc centre / radius measured on the art (PNG px): centre (173,197), outer ring radius 128
-        var disc = NewRect("Radar", r, TL, CC, At(173, 197), Vector2.one * 256f * ArtScale);
-        _radar = disc;
-        _radarRadius = 128f * ArtScale;
-    }
-
-    void BuildTopCenter()
-    {
-        var spr = ArtSprite("Tiempo");
-        if (spr == null) return;
-
-        var p = ArtPanel("TimerChip", spr, TC, TC, new Vector2(0, -26));
-        _timerText = ArtLabel(p, "10:00", 58, White, TextAnchor.MiddleCenter, 120, 52, 280, 92);
-        _modeText = Label(transform, "", 17, Muted, TextAnchor.UpperCenter, TC, TC, new Vector2(0, -26 - spr.rect.height * ArtScale - 6), new Vector2(420, 24), FontStyle.Bold);
-
-        _teamGroup = NewRect("Teams", transform, TC, TC, Vector2.zero, Vector2.zero).gameObject;
-        var pink = Neon(_teamGroup.transform, "PinkScore", TC, TC, new Vector2(-285, -34), new Vector2(170, 62), Pink, true, false, false, true, 16f);
-        _pinkScore = Label(pink.transform, "0", 42, Pink, TextAnchor.MiddleCenter, CC, CC, new Vector2(0, -6), new Vector2(170, 62), FontStyle.BoldAndItalic);
-        Tab(pink.transform, "ROSA", Pink, 14f, 13);
-        var cyan = Neon(_teamGroup.transform, "CyanScore", TC, TC, new Vector2(285, -34), new Vector2(170, 62), Cyan, false, true, true, false, 16f);
-        _cyanScore = Label(cyan.transform, "0", 42, Cyan, TextAnchor.MiddleCenter, CC, CC, new Vector2(0, -6), new Vector2(170, 62), FontStyle.BoldAndItalic);
-        Tab(cyan.transform, "CIAN", Cyan, 14f, 13);
-        _teamGroup.SetActive(false);
-    }
-
-    void BuildTopRight()
-    {
-        var spr = ArtSprite("Combate");
-        if (spr == null) return;
-
-        var p = ArtPanel("KillsPanel", spr, TR, TR, new Vector2(-30, -30));
-        _killsText = ArtLabel(p, "0", 48, Pink, TextAnchor.MiddleLeft, 140, 92, 120, 70);
-        _pveText = ArtLabel(p, "0", 48, Cyan, TextAnchor.MiddleLeft, 440, 92, 120, 70);
-    }
-
-    void BuildVitals()
-    {
-        var spr = ArtSprite("Vitales");
-        if (spr == null) return;
-
-        var p = ArtPanel("Vitals", spr, BL, BL, new Vector2(30, 30));
-        _healthText = ArtLabel(p, "100", 52, White, TextAnchor.MiddleCenter, 40, 88, 134, 72);
-
-        // The art's three bars (PNG px): shield / energy / jetpack
-        _shield  = ArtBar(p, "Shield",  348, 63,  429, 21, Cyan,   false);
-        _stamina = ArtBar(p, "Energy",  348, 103, 429, 21, Yellow, false);
-        _jet     = ArtBar(p, "Jetpack", 348, 143, 429, 21, Pink,   false);
-        _shieldText = ArtLabel(p, "", 12, Cyan, TextAnchor.MiddleLeft, 320, 63, 10, 10, FontStyle.Bold);   // unused in art mode
-
-        // Health, dash, dodge and katana aren't in the art: a matching "ESTADO" panel stacked above it
-        float w = spr.rect.width * ArtScale;
-        float top = 30 + spr.rect.height * ArtScale + 12;
-        var panel = Neon(transform, "StatusPanel", BL, BL, new Vector2(30, top), new Vector2(w, 86), Cyan, false, true, false, true, 14f);
-        Tab(panel.transform, "ESTADO", Cyan, 24f, 14);
-
-        Label(panel.transform, "VIDA", 12, Muted, TextAnchor.MiddleLeft, TL, TL, new Vector2(26, -22), new Vector2(40, 16), FontStyle.Bold);
-        var healthTrack = NewRect("VIDA", panel.transform, TL, TL, new Vector2(70, -24), new Vector2(w - 70 - 26, 12));
-        _health = MakePillBar(healthTrack, 12f, Green, true, 0.92f);
-
-        float gap = 14f, colW = (w - 52f - 2f * gap) / 3f;
-        string[] names = { "DASH", "ESQUIVA [C]", "KATANA [V]" };
-        Color[] cols = { Pink, Cyan, Pink };
-        var bars = new Bar[3];
-        for (int i = 0; i < 3; i++)
-        {
-            float x = 26f + i * (colW + gap);
-            Label(panel.transform, names[i], 12, Muted, TextAnchor.MiddleLeft, TL, TL, new Vector2(x, -44), new Vector2(colW, 16), FontStyle.Bold);
-            var track = NewRect(names[i], panel.transform, TL, TL, new Vector2(x, -62), new Vector2(colW, 8));
-            bars[i] = MakePillBar(track, 8f, cols[i], false, 0.92f);
-        }
-        _dash = bars[0]; _dodge = bars[1]; _katana = bars[2];
-    }
-
-    /// <summary>A labelled slim bar for the strip above the vitals panel (x, y from the strip's bottom-left, canvas units).</summary>
-    Bar ExtraBar(RectTransform strip, string label, float x, float y, float width, Color color, bool ghost)
-    {
-        float h = ghost ? 12f : 8f;
-        var track = NewRect(label, strip, BL, BL, new Vector2(x, y), new Vector2(width, h));
-        var bar = MakePillBar(track, h, color, ghost, 0.92f);
-        Label(strip, label, 12, Muted, TextAnchor.LowerLeft, BL, BL, new Vector2(x + 2f, y + h + 1f), new Vector2(width, 16), FontStyle.Bold);
-        return bar;
-    }
-
-    void BuildWeaponCard()
-    {
-        var spr = ArtSprite("Armas");
-        if (spr == null) return;
-
-        var p = ArtPanel("WeaponCard", spr, BR, BR, new Vector2(-30, 30));
-        _weaponName = ArtLabel(p, "SIN ARMA", 30, White, TextAnchor.MiddleLeft, 78, 62, 400, 56);
-        _ammoCurrent = ArtLabel(p, "0", 64, White, TextAnchor.MiddleRight, 470, 56, 150, 76);
-        _ammoMax = ArtLabel(p, "/ 0", 28, Muted, TextAnchor.MiddleLeft, 626, 70, 110, 56);
-
-        // Reload / heat bars under the weapon name row
-        _reloadGroup = NewRect("Reload", p, TL, TL, At(78, 124), new Vector2(620, 30) * ArtScale).gameObject;
-        _reloadLabel = Label(_reloadGroup.transform, "RECARGANDO", 13, Yellow, TextAnchor.UpperLeft, TL, TL, Vector2.zero, new Vector2(160, 14), FontStyle.Bold);
-        _reload = SlimBar(_reloadGroup.transform, new Vector2(0, -16), 620 * ArtScale, Yellow);
-        _reloadGroup.SetActive(false);
-
-        _heatGroup = NewRect("Heat", p, TL, TL, At(78, 124), new Vector2(620, 30) * ArtScale).gameObject;
-        Label(_heatGroup.transform, "CALOR", 13, new Color(1f, 0.5f, 0.1f), TextAnchor.UpperLeft, TL, TL, Vector2.zero, new Vector2(120, 14), FontStyle.Bold);
-        _heat = SlimBar(_heatGroup.transform, new Vector2(0, -16), 620 * ArtScale, new Color(1f, 0.45f, 0.05f));
-        _heatGroup.SetActive(false);
-
-        // Grenade names sit in the art's two chips, to the right of the [Q] / [F] icons
-        _grenadeQ = ArtLabel(p, "", 17, White, TextAnchor.MiddleLeft, 172, 178, 225, 40, FontStyle.Bold, 11);
-        _grenadeF = ArtLabel(p, "", 15, White, TextAnchor.MiddleLeft, 566, 178, 185, 40, FontStyle.Bold, 10);
-    }
-
-    Bar SlimBar(Transform parent, Vector2 pos, float width, Color color)
-    {
-        var track = NewRect("Bar", parent, TL, TL, pos, new Vector2(width, 8));
-        return MakePillBar(track, 8f, color, false, 0.92f);
-    }
-
-    // ── Neon frame helpers ────────────────────────────────────────────────
-
-    /// <summary>Angular neon panel (chamfered corners, glow, corner ticks) — see NeonPanel.</summary>
-    NeonPanel Neon(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color accentColor,
-                   bool cutTL = false, bool cutTR = true, bool cutBR = false, bool cutBL = true, float chamfer = 16f)
-    {
-        var rt = NewRect(name, parent, anchor, pivot, pos, size);
-        var p = rt.gameObject.AddComponent<NeonPanel>();
-        p.border = accentColor;
-        p.cutTL = cutTL; p.cutTR = cutTR; p.cutBR = cutBR; p.cutBL = cutBL;
-        p.chamfer = chamfer;
-        return p;
-    }
-
-    /// <summary>Slanted title tab hanging on the panel's top-left edge (like "DRON GUARDIÁN" in the art).</summary>
-    NeonPanel Tab(Transform panel, string text, Color accentColor, float x = 24f, int fontSize = 16)
-    {
-        float w = text.Length * fontSize * 0.66f + 46f;
-        var rt = NewRect("Tab_" + text, panel, TL, new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(w, 30f));
-        var p = rt.gameObject.AddComponent<NeonPanel>();
-        p.shape = NeonPanel.Shape.Parallelogram;
-        p.slant = 12f;
-        p.border = new Color(1f, 1f, 1f, 0.95f);
-        p.borderThickness = 1.5f;
-        p.glowThickness = 6f;
-        p.glowAlpha = 0.35f;
-        p.cornerAccents = false;
-        Color top = Color.Lerp(accentColor, White, 0.18f); top.a = 1f;
-        Color bottom = accentColor * 0.72f; bottom.a = 1f;
-        p.fillTop = top; p.fillBottom = bottom;
-        Label(rt, text, fontSize, White, TextAnchor.MiddleCenter, CC, CC, Vector2.zero, new Vector2(w, 30f), FontStyle.BoldAndItalic);
-        return p;
-    }
-
-    /// <summary>Hexagon badge (key hints, icons).</summary>
-    NeonPanel HexBadge(Transform parent, string text, Color accentColor, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, int fontSize = 20)
-    {
-        var rt = NewRect("Hex_" + text, parent, anchor, pivot, pos, size);
-        var p = rt.gameObject.AddComponent<NeonPanel>();
-        p.shape = NeonPanel.Shape.Hexagon;
-        p.border = accentColor;
-        p.borderThickness = 2f;
-        p.glowThickness = 8f;
-        p.cornerAccents = false;
-        p.fillTop = Color.Lerp(NavyDeep, accentColor, 0.30f);
-        p.fillBottom = NavyDeep;
-        Label(rt, text, fontSize, White, TextAnchor.MiddleCenter, CC, CC, Vector2.zero, size, FontStyle.BoldAndItalic);
-        return p;
-    }
-
-    // ── Top-left: planet + radar ──────────────────────────────────────────
 
     // ── Top-centre: timer, mode, team scores ──────────────────────────────
 
-    // ── Top-right: kills ──────────────────────────────────────────────────
-
-    // ── Bottom-left: vitals ───────────────────────────────────────────────
-
-    void MiniBar(Transform parent, string label, float y, Color color, out Bar bar)
+    void BuildTopCenter()
     {
-        Label(parent, label, 13, Muted, TextAnchor.MiddleLeft, TL, TL, new Vector2(26, y), new Vector2(120, 18), FontStyle.Bold);
-        bar = MakeBar(parent, label, new Vector2(170, y - 5), new Vector2(374, 9), color, ghost: false);
+        _timerText = Txt(transform, "10:00", 36, White, TextAnchor.UpperCenter, TC, TC, new Vector2(0f, -30f), new Vector2(300f, 48f), _fontLight);
+        _modeText  = Txt(transform, "", 12, Soft, TextAnchor.UpperCenter, TC, TC, new Vector2(0f, -84f), new Vector2(500f, 16f), _fontSemi);
+        _teamText  = Txt(transform, "", 13, White, TextAnchor.UpperCenter, TC, TC, new Vector2(0f, -106f), new Vector2(500f, 18f), _fontSemi);
+        _teamText.gameObject.SetActive(false);
     }
 
-    // ── Bottom-right: weapon ──────────────────────────────────────────────
+    // ── Top-right: kills + kill feed ──────────────────────────────────────
 
-    // ── Bottom-centre: weapon slots ───────────────────────────────────────
-
-    void BuildSlots()
+    void BuildTopRight()
     {
-        _slotsRoot = NewRect("Slots", transform, BC, BC, new Vector2(0, 30), new Vector2(560, 64));
+        _statsText = Txt(transform, "", 15, White, TextAnchor.MiddleRight, TR, TR, new Vector2(-Margin, -52f), new Vector2(480f, 22f));
+        _feedTexts = new Text[FeedLines];
+        for (int i = 0; i < FeedLines; i++)
+            _feedTexts[i] = Txt(transform, "", 13, Soft, TextAnchor.MiddleRight, TR, TR, new Vector2(-Margin, -90f - i * 22f), new Vector2(480f, 20f));
     }
 
-    void BuildSlotBoxes(int count)
-    {
-        foreach (Transform child in _slotsRoot) Destroy(child.gameObject);
+    // ── Bottom-centre: shield, health, dash / dodge ───────────────────────
 
-        _slotBg = new NeonPanel[count]; _slotKey = new Text[count]; _slotName = new Text[count]; _slotState = new int[count];
-        const float w = 160f, gap = 10f;
-        float total = count * w + (count - 1) * gap;
-        for (int i = 0; i < count; i++)
+    void BuildVitals()
+    {
+        var vit = NewRect("Vitales", transform, BC, BC, new Vector2(0f, 110f), new Vector2(342f, 56f));
+
+        // Shield: six segments, each filled from the left
+        _shieldFill = new RectTransform[6];
+        _shieldFillImg = new Image[6];
+        for (int i = 0; i < 6; i++)
         {
-            float x = -total / 2f + w / 2f + i * (w + gap);
-            var bg = Neon(_slotsRoot, "Slot" + i, CC, CC, new Vector2(x, 0), new Vector2(w, 58), Cyan, false, true, false, true, 12f);
-            bg.glowThickness = 8f;
-            _slotBg[i] = bg;
-            _slotState[i] = -1;
-
-            var badge = HexBadge(bg.transform, (i + 1).ToString(), Cyan, ML, ML, new Vector2(8, 0), new Vector2(40, 38), 18);
-            _slotKey[i] = badge.GetComponentInChildren<Text>();
-            _slotName[i] = Label(bg.transform, "", 16, White, TextAnchor.MiddleLeft, ML, ML, new Vector2(56, 0), new Vector2(98, 58), FontStyle.Bold);
+            var seg = Box(vit, "Seg" + i, TL, TL, new Vector2(i * 58f, 0f), new Vector2(52f, 5f), Track);
+            var fill = Box(seg.transform, "Fill", ML, ML, Vector2.zero, Vector2.zero, Cyan);
+            fill.rectTransform.anchorMin = Vector2.zero; fill.rectTransform.anchorMax = Vector2.one;
+            fill.rectTransform.offsetMin = Vector2.zero; fill.rectTransform.offsetMax = Vector2.zero;
+            _shieldFill[i] = fill.rectTransform; _shieldFillImg[i] = fill;
         }
-        _builtSlotCount = count;
+
+        // Health: thin white bar with a damage trail
+        _health = ApexBar(vit, "Vida", TL, TL, new Vector2(0f, -15f), 342f, 8f, White, White, true, false);
+
+        _vidaText   = Txt(vit, "VIDA  100", 13, White, TextAnchor.MiddleLeft, TL, TL, new Vector2(0f, -33f), new Vector2(171f, 16f), _fontSemi);
+        _escudoText = Txt(vit, "ESCUDO  100%", 13, Cyan, TextAnchor.MiddleRight, TR, TR, new Vector2(0f, -33f), new Vector2(171f, 16f), _fontSemi);
+
+        // Dash and dodge: a ring that refills as the ability recharges
+        var ab = NewRect("Habilidades", transform, BC, BL, new Vector2(230f, 80f), new Vector2(120f, 66f));
+        _dashRing  = AbilityRing(ab, 0f,  "ALT", "DASH",    out _dashKey);
+        _dodgeRing = AbilityRing(ab, 64f, "C",   "ESQUIVA", out _dodgeKey);
+    }
+
+    Image AbilityRing(RectTransform parent, float x, string key, string label, out Text keyText)
+    {
+        var holder = NewRect(label, parent, TL, TL, new Vector2(x, 0f), new Vector2(54f, 66f));
+
+        var track = Box(holder, "Track", TL, TL, new Vector2(5f, 0f), new Vector2(44f, 44f), new Color(1f, 1f, 1f, 0.20f));
+        track.sprite = Ring(0.07f);
+
+        var fill = Box(holder, "Fill", TL, TL, new Vector2(5f, 0f), new Vector2(44f, 44f), Cyan);
+        fill.sprite = Ring(0.07f);
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Radial360;
+        fill.fillOrigin = (int)Image.Origin360.Top;
+        fill.fillClockwise = true;
+        fill.fillAmount = 1f;
+
+        keyText = Txt(holder, key, 13, Cyan, TextAnchor.MiddleCenter, TL, TL, new Vector2(5f, 0f), new Vector2(44f, 44f), _fontSemi);
+        Txt(holder, label, 10, Soft, TextAnchor.UpperCenter, TL, TL, new Vector2(-10f, -52f), new Vector2(74f, 14f), _fontSemi);
+        return fill;
+    }
+
+    // ── Bottom-left: energy + jetpack ─────────────────────────────────────
+
+    void BuildEnergy()
+    {
+        var en = NewRect("Energia", transform, BL, BL, new Vector2(Margin, 72f), new Vector2(260f, 72f));
+        _energy  = EnergyRow(en, 0f,   "ENERGÍA", "Zap",    new Color32(0xFF, 0xB0, 0x20, 255), new Color32(0xFF, 0xE0, 0x8A, 255), Amber, out _energyValue);
+        // The game has no jetpack yet: this row is a placeholder that stays empty.
+        _jetpack = EnergyRow(en, -46f, "JETPACK", "Rocket", new Color32(0x22, 0xA9, 0xDD, 255), new Color32(0x8D, 0xEB, 0xFF, 255), Cyan, out _jetpackValue);
+    }
+
+    Bar EnergyRow(RectTransform parent, float y, string label, string iconName, Color from, Color to, Color valueColor, out Text value)
+    {
+        var icon = Box(parent, "Icon", TL, TL, new Vector2(0f, y), new Vector2(15f, 15f), White);
+        icon.sprite = Resources.Load<Sprite>(ResourcePaths.HudArtFolder + "Icons/" + iconName);
+        icon.preserveAspect = true;
+        if (icon.sprite == null) icon.enabled = false;
+
+        Txt(parent, label, 12, new Color(1f, 1f, 1f, 0.85f), TextAnchor.MiddleLeft, TL, TL, new Vector2(23f, y + 1f), new Vector2(150f, 15f), _fontSemi);
+        value = Txt(parent, "0", 15, valueColor, TextAnchor.MiddleRight, TL, TL, new Vector2(180f, y + 2f), new Vector2(80f, 17f), _fontSemi);
+        return ApexBar(parent, label, TL, TL, new Vector2(0f, y - 24f), 260f, 6f, from, to, false);
+    }
+
+    // ── Bottom-right: weapon, ammo, grenades ──────────────────────────────
+
+    void BuildWeapon()
+    {
+        _grenadeF = Txt(transform, "", 14, White, TextAnchor.MiddleRight, BR, BR, new Vector2(-Margin, 56f), new Vector2(240f, 20f), _fontSemi);
+        _grenadeQ = Txt(transform, "", 14, White, TextAnchor.MiddleRight, BR, BR, new Vector2(-Margin - 250f, 56f), new Vector2(240f, 20f), _fontSemi);
+
+        // Bullet pips sit right above the grenades; the reload label and the plasma heat bar share the strip above the pips
+        BuildPips();
+
+        _reloadGroup = NewRect("Reload", transform, BR, BR, new Vector2(-Margin, 108f), new Vector2(300f, 14f)).gameObject;
+        _reloadCg = _reloadGroup.AddComponent<CanvasGroup>();
+        _reloadCg.alpha = 0f;
+        _reloadLabel = Txt(_reloadGroup.transform, "RECARGANDO", 10, Amber, TextAnchor.UpperRight, TR, TR, Vector2.zero, new Vector2(300f, 12f), _fontSemi);
+
+        _heatGroup = NewRect("Heat", transform, BR, BR, new Vector2(-Margin, 108f), new Vector2(300f, 24f)).gameObject;
+        Txt(_heatGroup.transform, "CALOR", 10, new Color(1f, 0.55f, 0.15f), TextAnchor.UpperRight, TR, TR, Vector2.zero, new Vector2(300f, 12f), _fontSemi);
+        _heat = ApexBar(_heatGroup.transform, "Bar", TR, TR, new Vector2(0f, -15f), 300f, 4f,
+                        new Color32(0xFF, 0x7A, 0x1A, 255), new Color32(0xFF, 0xB2, 0x4A, 255), false, false);
+        _heatGroup.SetActive(false);
+
+        _ammoText   = Txt(transform, "", 92, White, TextAnchor.MiddleRight, BR, BR, AmmoBasePos, new Vector2(480f, 110f), _fontLight);
+        _weaponName = Txt(transform, "SIN ARMA", 14, new Color(1f, 1f, 1f, 0.70f), TextAnchor.MiddleRight, BR, BR, NameBasePos, new Vector2(480f, 20f), _fontSemi);
     }
 
     // ── Event banner ──────────────────────────────────────────────────────
 
     void BuildBanner()
     {
-        var panel = Neon(transform, "EventBanner", new Vector2(0.5f, 0.74f), CC, Vector2.zero, new Vector2(820, 90), Pink, true, true, true, true, 24f);
-        panel.borderThickness = 3f;
-        panel.glowThickness = 14f;
-        Tab(panel.transform, "ALERTA", Pink);
-        _bannerText = Label(panel.transform, "", 34, White, TextAnchor.MiddleCenter, CC, CC, new Vector2(0, -4), new Vector2(780, 70), FontStyle.BoldAndItalic, outline: Pink);
-        _banner = panel.gameObject;
+        var b = NewRect("EventBanner", transform, new Vector2(0.5f, 0.74f), CC, Vector2.zero, new Vector2(900f, 70f));
+        _bannerText = Txt(b, "", 32, White, TextAnchor.MiddleCenter, CC, CC, new Vector2(0f, 6f), new Vector2(900f, 50f), _fontSemi);
+        Box(b, "Line", CC, CC, new Vector2(0f, -28f), new Vector2(120f, 2f), Cyan);
+        _banner = b.gameObject;
         _banner.SetActive(false);
     }
 
@@ -373,15 +204,16 @@ public partial class HUD
         var root = NewRect("Crosshair", transform, CC, CC, Vector2.zero, Vector2.zero);
         _crosshairRoot = root.gameObject;
 
-        _centerDot = Box(root, "Dot", CC, CC, Vector2.zero, new Vector2(4, 4), White);
+        _centerDot = Box(root, "Dot", CC, CC, Vector2.zero, new Vector2(6, 6), Cyan);
+        _centerDot.sprite = Circle();
 
-        // Four ticks: up, down, left, right
+        // Four thin ticks: up, down, left, right
         _ticks = new RectTransform[4]; _tickImages = new Image[4];
-        Vector2[] sizes = { new Vector2(3, 12), new Vector2(3, 12), new Vector2(12, 3), new Vector2(12, 3) };
+        Vector2[] sizes = { new Vector2(2, 12), new Vector2(2, 12), new Vector2(12, 2), new Vector2(12, 2) };
         for (int i = 0; i < 4; i++)
         {
             var img = Box(root, "Tick" + i, CC, CC, Vector2.zero, sizes[i], White);
-            img.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.7f);
+            img.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.55f);
             _ticks[i] = img.rectTransform; _tickImages[i] = img;
         }
 
@@ -390,13 +222,44 @@ public partial class HUD
         _hitImages = new Image[4];
         for (int i = 0; i < 4; i++)
         {
-            var img = Box(_hitMarker, "Hit" + i, CC, CC, Vector2.zero, new Vector2(3, 14), White);
+            var img = Box(_hitMarker, "Hit" + i, CC, CC, Vector2.zero, new Vector2(2, 14), White);
             float ang = 45f + i * 90f;
             img.rectTransform.localRotation = Quaternion.Euler(0, 0, ang);
             img.rectTransform.anchoredPosition = Quaternion.Euler(0, 0, ang) * new Vector2(0, 17);
             _hitImages[i] = img;
         }
         _hitMarker.gameObject.SetActive(false);
+    }
+
+    // ── Damage-direction arcs + shield warning ────────────────────────────
+
+    void BuildDamageArcs()
+    {
+        _damageArcs = new DamageArc[4];
+        for (int i = 0; i < _damageArcs.Length; i++)
+        {
+            var pivot = NewRect("DamageArc" + i, transform, CC, CC, Vector2.zero, new Vector2(380f, 380f));
+            var arcRt = NewRect("Arc", pivot, CC, CC, Vector2.zero, new Vector2(380f, 380f));
+            var arc = arcRt.gameObject.AddComponent<HudArc>();
+            arc.raycastTarget = false;
+            arc.Set(190f, 187.5f, -35f, 70f);
+            arc.color = new Color(Alert.r, Alert.g, Alert.b, 0f);
+            _damageArcs[i] = new DamageArc { pivot = pivot, arc = arc, life = 0f };
+        }
+    }
+
+    void BuildShieldWarning()
+    {
+        var w = NewRect("ShieldWarning", transform, CC, CC, new Vector2(0f, -118f), new Vector2(400f, 24f));
+        _shieldWarn = w.gameObject;
+
+        _shieldWarnIcon = Box(w, "Icon", CC, CC, new Vector2(-58f, 0f), new Vector2(14f, 16f), Alert);
+        _shieldWarnIcon.sprite = Resources.Load<Sprite>(ResourcePaths.HudArtFolder + "Icons/ShieldAlert");
+        _shieldWarnIcon.preserveAspect = true;
+        if (_shieldWarnIcon.sprite == null) _shieldWarnIcon.enabled = false;
+
+        _shieldWarnText = Txt(w, "ESCUDO BAJO", 14, Alert, TextAnchor.MiddleLeft, CC, ML, new Vector2(-42f, 0f), new Vector2(200f, 20f), _fontSemi);
+        _shieldWarn.SetActive(false);
     }
 
     // ── Damage vignette ───────────────────────────────────────────────────

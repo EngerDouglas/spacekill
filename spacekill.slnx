@@ -1,0 +1,4 @@
+﻿<Solution>
+  <Project Path="OrbitRush.Runtime.csproj" />
+  <Project Path="OrbitRush.Editor.csproj" />
+</Solution>

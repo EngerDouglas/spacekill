@@ -63,19 +63,22 @@ public class GrenadeSpawner : MonoBehaviour
 
         var rng = new System.Random(seed);
 
-        foreach (var kind in grenadesToScatter)
-        {
-            if (kind == GrenadeKind.MeteorGrenade) continue;   // meteors were removed from the game
-            var template = BuildGrenadeTemplate(kind);
-            SpawnPickup(template, kind.ToString(), GrenadeColors[(int)kind % GrenadeColors.Length],
-                isSpecial: false, container.transform, rng);
-        }
+        int copies = _planet.PickupCopies;            // bigger planets get several of each grenade
+        for (int c = 0; c < copies; c++)
+            foreach (var kind in grenadesToScatter)
+            {
+                if (kind == GrenadeKind.MeteorGrenade) continue;   // meteors were removed from the game
+                var template = BuildGrenadeTemplate(kind);
+                SpawnPickup(template, kind.ToString(), GrenadeColors[(int)kind % GrenadeColors.Length],
+                    isSpecial: false, container.transform, rng);
+            }
 
         if (scatterSpecial)
-        {
-            var template = BuildSpecialTemplate();
-            SpawnPickup(template, "BlackHoleBomb", SpecialColor, isSpecial: true, container.transform, rng);
-        }
+            for (int c = 0; c < Mathf.Max(1, copies / 3); c++)       // the rare bomb: one per three copies
+            {
+                var template = BuildSpecialTemplate();
+                SpawnPickup(template, "BlackHoleBomb", SpecialColor, isSpecial: true, container.transform, rng);
+            }
     }
 
     /// <summary>Black-hole bomb template (also used by WeaponInventory for the player's starting special).</summary>

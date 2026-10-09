@@ -22,10 +22,10 @@ public static class UiAnim
     public static float EaseOutCubic(float k) { k = Mathf.Clamp01(k); float x = 1f - k; return 1f - x * x * x; }
 
     /// <summary>Adds an intro to one element.</summary>
-    public static UiIntro Intro(RectTransform rt, float delay, float duration, Vector2 slide, float scaleFrom = 0.92f, bool fade = true)
+    public static UiIntro Intro(RectTransform rt, float delay, float duration, Vector2 slide, float scaleFrom = 0.92f, bool fade = true, bool gentle = false)
     {
         var intro = rt.gameObject.AddComponent<UiIntro>();
-        intro.delay = delay; intro.duration = duration; intro.slide = slide; intro.scaleFrom = scaleFrom; intro.fade = fade;
+        intro.delay = delay; intro.duration = duration; intro.slide = slide; intro.scaleFrom = scaleFrom; intro.fade = fade; intro.gentle = gentle;
         return intro;
     }
 
@@ -33,7 +33,7 @@ public static class UiAnim
     /// Every direct child of `parent` pops in one after another. Children anchored near an edge slide in from it;
     /// centred ones rise a little and scale up. Names starting with "Shade" (background dimmers) are left alone.
     /// </summary>
-    public static void Stagger(Transform parent, float step = 0.04f, float duration = 0.45f, float startDelay = 0f, float distance = 90f)
+    public static void Stagger(Transform parent, float step = 0.04f, float duration = 0.45f, float startDelay = 0f, float distance = 90f, bool gentle = false)
     {
         int i = 0;
         foreach (Transform child in parent)
@@ -49,7 +49,7 @@ public static class UiAnim
             else if (a.y < 0.25f) slide = new Vector2(0f, -distance * 0.5f);
             else slide = new Vector2(0f, -distance * 0.3f);
 
-            Intro(rt, startDelay + i * step, duration, slide, 0.94f);
+            Intro(rt, startDelay + i * step, duration, slide, gentle ? 1f : 0.94f, true, gentle);
             i++;
         }
     }
@@ -70,6 +70,8 @@ public class UiIntro : MonoBehaviour
     public Vector2 slide;
     public float scaleFrom = 0.92f;
     public bool fade = true;
+    /// <summary>Smooth ease with no overshoot (the minimalist menus); false keeps the springy pop.</summary>
+    public bool gentle;
 
     private RectTransform _rt;
     private CanvasGroup _group;
@@ -106,7 +108,7 @@ public class UiIntro : MonoBehaviour
 
     private void Apply(float k)
     {
-        float e = UiAnim.EaseOutBack(k);
+        float e = gentle ? UiAnim.EaseOutCubic(k) : UiAnim.EaseOutBack(k);
         _rt.anchoredPosition = Vector2.LerpUnclamped(_endPos + slide, _endPos, e);
         _rt.localScale = Vector3.LerpUnclamped(_endScale * scaleFrom, _endScale, e);
         if (fade && _group != null) _group.alpha = UiAnim.EaseOutCubic(k * 1.4f);

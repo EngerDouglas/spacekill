@@ -7,18 +7,20 @@ namespace OrbitRush
 
 /// <summary>
 /// Orbit Rush in-game HUD, built entirely in code (add it to a Canvas GameObject — no wiring).
-/// Same visual language as the main menu: navy glass panels, neon pink / cyan / yellow accents.
+/// "Apex" look: no panels, thin white line art, one cyan accent, Inter type. Layout (1920×1080 reference):
 ///
-///   top-left     planet + gravity, enemy radar
-///   top-centre   match timer, team scores, mode
-///   top-right    kills (players / AI)
-///   bottom-left  health (with damage trail), shield, jetpack / energy / dash
-///   bottom-right weapon, ammo, reload progress, heat, grenades
-///   bottom-centre weapon slots
-///   centre       dynamic crosshair (opens with movement and fire, turns red over an enemy), hit marker
-///   full-screen  damage flash and low-health pulse
+///   top-left       radar, planet name + gravity
+///   top-centre     match timer, mode (team scores in team modes)
+///   top-right      kills / AI kills, kill feed
+///   bottom-left    energy and jetpack bars
+///   bottom-centre  shield (6 segments), health, dash / dodge rings
+///   bottom-right   weapon, ammo, reload / heat, grenades
+///   centre         dynamic crosshair, hit marker, damage-direction arcs, "shield low" warning
+///   full-screen    damage flash and low-health pulse
 ///
-/// Public API used elsewhere: <see cref="Instance"/>, <see cref="ShowEvent"/>, <see cref="ShowHitMarker"/>.
+/// The weapon wheel (hold Tab) lives in <see cref="WeaponWheel"/>.
+/// Public API used elsewhere: <see cref="Instance"/>, <see cref="ShowEvent"/>, <see cref="ShowHitMarker"/>, <see cref="SetMelee"/>,
+/// <see cref="AimZoom"/>, <see cref="SetCrosshairVisible"/>, <see cref="SetScopeHidden"/>, <see cref="AimingAtEnemy"/>, <see cref="SetHidden"/>.
 /// </summary>
 public partial class HUD : MonoBehaviour
 {
@@ -27,23 +29,21 @@ public partial class HUD : MonoBehaviour
     /// <summary>0..1 aim-down-sights amount (set by WeaponAim): the crosshair tightens as it rises.</summary>
     public float AimZoom { get; set; }
 
-    // ── Palette (shared with the main menu) ───────────────────────────────
-    static readonly Color Navy     = new Color(0.025f, 0.03f, 0.10f, 0.86f);
-    static readonly Color NavyDeep = new Color(0.02f, 0.024f, 0.10f, 0.94f);
-    static readonly Color Pink     = new Color(0.98f, 0.01f, 0.62f);
-    static readonly Color Cyan     = new Color(0.00f, 0.78f, 0.99f);
-    static readonly Color Yellow   = new Color(0.99f, 0.80f, 0.09f);
-    static readonly Color Green    = new Color(0.20f, 1.00f, 0.55f);
-    static readonly Color Red      = new Color(1.00f, 0.18f, 0.20f);
-    static readonly Color White    = new Color(0.96f, 0.96f, 1.00f);
-    static readonly Color Muted    = new Color(0.68f, 0.72f, 0.88f);
+    // ── Palette ───────────────────────────────────────────────────────────
+    static readonly Color White   = Color.white;
+    static readonly Color Soft    = new Color(1f, 1f, 1f, 0.63f);
+    static readonly Color Cyan    = new Color32(0x4F, 0xD6, 0xFF, 255);
+    static readonly Color Amber   = new Color32(0xFF, 0xD1, 0x66, 255);
+    static readonly Color Alert   = new Color32(0xFF, 0x5B, 0x5B, 255);
+    static readonly Color Track   = new Color(1f, 1f, 1f, 0.12f);
+    static readonly Color Ink     = new Color32(0x0B, 0x12, 0x20, 255);
 
     // ── Runtime refs ──────────────────────────────────────────────────────
     private PlayerStats      _stats;
     private WeaponInventory  _inventory;
     private PlayerController _controller;
     private Rigidbody        _playerBody;
-    private Font             _font;
+    private Font             _font, _fontLight, _fontSemi;
 
     // ── Bars ──────────────────────────────────────────────────────────────
     private class Bar
@@ -52,32 +52,42 @@ public partial class HUD : MonoBehaviour
         public Image fillImage;
         public float shown = 1f, ghostShown = 1f;
     }
-    private Bar _health, _shield, _jet, _stamina, _dash, _heat, _reload, _dodge, _katana;
+    private Bar _health, _energy, _jetpack, _heat;
+    private RectTransform[] _shieldFill;
+    private Image[] _shieldFillImg;
+    private Image _dashRing, _dodgeRing;
+    private Text _dashKey, _dodgeKey;
+    private Text _vidaText, _escudoText, _energyValue, _jetpackValue;
     private float _meleeCharge, _meleeDodge = 1f;
     private bool _meleeOut;
 
-    /// <summary>Katana state from MeleeCombat: charge 0-1, dodge readiness 0-1, drawn or stowed.</summary>
+    /// <summary>Katana state from MeleeCombat: charge 0-1, dodge readiness 0-1, drawn or stowed. The HUD only shows the dodge readiness.</summary>
     public void SetMelee(float charge, float dodgeReady, bool drawn) { _meleeCharge = charge; _meleeDodge = dodgeReady; _meleeOut = drawn; }
-    private Text _healthText, _shieldText;
 
-    // ── Texts / panels ────────────────────────────────────────────────────
-    private Text _weaponName, _ammoCurrent, _ammoMax, _reloadLabel, _grenadeQ, _grenadeF;
+    // ── Texts / groups ────────────────────────────────────────────────────
+    private Text _weaponName, _ammoText, _reloadLabel, _grenadeQ, _grenadeF;   // ammo animation: HUD.Ammo.cs
     private GameObject _heatGroup, _reloadGroup;
     private Text _planetName, _gravityText;
-    private Text _timerText, _modeText, _pinkScore, _cyanScore, _killsText, _pveText;
-    private GameObject _teamGroup;
+    private Text _timerText, _modeText, _teamText, _statsText;
+
+    // ── Kill feed ─────────────────────────────────────────────────────────
+    private class FeedLine { public string text; public bool mine; public float age; }
+    private const int   FeedLines = 3;
+    private const float FeedLife  = 6f;
+    private readonly List<FeedLine> _feed = new List<FeedLine>();
+    private Text[] _feedTexts;
+
+    // ── Damage direction / shield warning ─────────────────────────────────
+    private class DamageArc { public RectTransform pivot; public HudArc arc; public float life; public float angle; }
+    private DamageArc[] _damageArcs;
+    private GameObject _shieldWarn;
+    private Image _shieldWarnIcon;
+    private Text _shieldWarnText;
 
     // ── Banner ────────────────────────────────────────────────────────────
     private GameObject _banner;
     private Text _bannerText;
     private float _bannerTimer;
-
-    // ── Weapon slots ──────────────────────────────────────────────────────
-    private Transform _slotsRoot;
-    private NeonPanel[] _slotBg;
-    private Text[] _slotKey, _slotName;
-    private int[] _slotState;
-    private int _builtSlotCount = -1;
 
     // ── Crosshair / feedback ──────────────────────────────────────────────
     private RectTransform[] _ticks;
@@ -88,20 +98,22 @@ public partial class HUD : MonoBehaviour
     private float _hitTimer, _hitDuration = 0.18f;
     private bool _hitWasKill;
     private float _crossGap = 10f, _kick;
-    private int _lastAmmo = -1;
     private Image _vignette;
     private float _damageFlash, _lastHealth = -1f;
 
     // ── Radar ─────────────────────────────────────────────────────────────
     private const float RadarRange = 60f;
-    private const float RadarRadius = 92f;
+    private const float RadarRadius = 100f;
     private RectTransform _radar;
+    private float _radarRadius = RadarRadius;
     private readonly List<Image> _radarDots = new List<Image>();
     private readonly List<EnemyStats> _enemies = new List<EnemyStats>();
     private float _enemyScanTimer;
 
     // ── Cached sprites ────────────────────────────────────────────────────
-    private static Sprite _circle, _ring, _vignetteSprite;
+    private static Sprite _circle, _vignetteSprite, _triangle, _pill;
+    private static readonly Dictionary<string, Sprite> _rings = new Dictionary<string, Sprite>();
+    private static readonly Dictionary<string, Sprite> _gradPills = new Dictionary<string, Sprite>();
 
     // ══════════════════════════════════════════════════════════════════════
 
@@ -121,6 +133,10 @@ public partial class HUD : MonoBehaviour
     /// <summary>Fades the whole HUD out (pause / death / scoreboard) or back in. Works while the game is paused.</summary>
     public void SetHidden(bool hidden) => _hidden = hidden;
 
+    private bool _wheelOpen;
+    /// <summary>The weapon wheel is open: the HUD fades away so it doesn't overlap the wheel.</summary>
+    public void SetWheelOpen(bool open) => _wheelOpen = open;
+
     private bool _scopeHidden;
     /// <summary>Looking through the sniper scope: the HUD fades away completely (independent of the pause / death hiding).</summary>
     public void SetScopeHidden(bool hidden) => _scopeHidden = hidden;
@@ -130,9 +146,21 @@ public partial class HUD : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         _font = LoadFont();
+        _fontLight = UiFactory.LoadFontLight();
+        _fontSemi = UiFactory.LoadFontSemiBold();
         BuildHUD();
         _group = GetComponent<CanvasGroup>();
         if (_group == null) _group = gameObject.AddComponent<CanvasGroup>();
+        KillFeed.Killed += OnKill;
+        WeaponBase.AnyFired += OnWeaponFired;
+    }
+
+    void OnDestroy()
+    {
+        KillFeed.Killed -= OnKill;
+        WeaponBase.AnyFired -= OnWeaponFired;
+        if (_stats != null) _stats.HitFrom -= OnPlayerHit;
+        if (Instance == this) Instance = null;
     }
 
     void Start()  => FindPlayer();
@@ -141,7 +169,7 @@ public partial class HUD : MonoBehaviour
     {
         RefreshHUD();
         if (_group != null)
-            _group.alpha = Mathf.MoveTowards(_group.alpha, (_hidden || _scopeHidden) ? 0f : 1f, Time.unscaledDeltaTime * (_scopeHidden ? 8f : 4f));
+            _group.alpha = Mathf.MoveTowards(_group.alpha, (_hidden || _scopeHidden || _wheelOpen) ? 0f : 1f, Time.unscaledDeltaTime * (_scopeHidden || _wheelOpen ? 8f : 4f));
     }
 }
 }

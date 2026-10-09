@@ -10,7 +10,7 @@ public enum EnemyKind { Robot, Drone, Zombie }
 /// The enemy brain. Perception (<see cref="AISenses"/>) and movement (<see cref="EnemyController"/>) are shared; the
 /// behaviour per kind lives in the partial files:
 ///   EnemyAI.Robot.cs  — tactical soldier: patrol, suspicion, cover + warned bursts, search, disabled
-///   EnemyAI.Drone.cs  — aerial hunter: orbit patrol, tracking + marking, dive passes, EMP, retreat, kamikaze, space chase
+///   EnemyAI.Drone.cs  — aerial hunter: orbit patrol, tracking + marking, dive passes, retreat, kamikaze, space chase
 ///   EnemyAI.Zombie.cs — horde melee: wander, drawn by noise, chase, grab
 /// Enemies near players think every frame; far ones think less often and enemies on empty planets freeze.
 /// </summary>
@@ -136,7 +136,7 @@ public partial class EnemyAI : MonoBehaviour
                 break;
             case EnemyKind.Drone:
                 Senses.viewDistance = 80f; Senses.viewAngle = 100f; Senses.hearing = 0.35f; Senses.footprintRadius = 16f;      // the propellers drown out sound
-                Senses.memorySeconds = 30f; Senses.instantRange = 4f; Senses.heatSensor = true; Senses.heatRange = 150f;
+                Senses.memorySeconds = 30f; Senses.instantRange = 4f;
                 Senses.eyeHeight = 0f; Senses.viewPitch = 35f;                                  // the spotlight sweeps the ground ahead
                 break;
             default:
@@ -216,7 +216,7 @@ public partial class EnemyAI : MonoBehaviour
         if (muzzle == null || projectileSpeed < 1f) return pos;
         float travel = Vector3.Distance(muzzle.position, pos) / projectileSpeed;
         var pc = c.stats != null ? c.stats.GetComponent<PlayerController>() : null;
-        float factor = pc != null && (pc.IsFlying || pc.IsJetpacking) ? 1f : 0.65f;        // flying targets: aim where they are going
+        float factor = 0.65f;
         return pos + c.Velocity * travel * factor * leadFactor;
     }
 

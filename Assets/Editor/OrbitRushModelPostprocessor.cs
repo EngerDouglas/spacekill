@@ -41,10 +41,11 @@ public class OrbitRushModelPostprocessor : AssetPostprocessor
     }
 
     // Bump to force a reimport of every model after changing material rules.
-    public override uint GetVersion() => 4;
+    public override uint GetVersion() => 6;
 
     bool IsPlanet => assetPath.Replace('\\', '/').Contains("/Planets/");
     bool IsWeapon => assetPath.Replace('\\', '/').Contains("/Weapons/");
+    bool IsProp => assetPath.Replace('\\', '/').Contains("/Models/Props/");   // vending machine, coins
     bool IsOurModel => assetPath.Replace('\\', '/').Contains("/Models/") || IsPlanet || IsWeapon;
 
     // Big joined meshes + runtime MeshColliders: keep meshes readable (required for colliders
@@ -118,6 +119,20 @@ public class OrbitRushModelPostprocessor : AssetPostprocessor
     // Panoramic sky texture (Resources/Sky): wraps horizontally, no seam, full resolution, good compression.
     void OnPreprocessTexture()
     {
+        // Drop-ship PBR maps (Resources/Ship): the normal map is read as a normal map, the data maps are linear
+        if (assetPath.Replace('\\', '/').Contains("/Resources/Ship/") || assetPath.Replace('\\', '/').Contains("/Resources/Pod/"))
+        {
+            var ti = (TextureImporter)assetImporter;
+            string file = Path.GetFileNameWithoutExtension(assetPath);
+            if (file.EndsWith("Normal")) ti.textureType = TextureImporterType.NormalMap;
+            else if (file.EndsWith("MetalSmooth") || file.EndsWith("AO")) ti.sRGBTexture = false;
+            if (file == "Explosion") { ti.alphaIsTransparency = true; ti.wrapMode = TextureWrapMode.Clamp; ti.mipmapEnabled = false; ti.maxTextureSize = 2048; ti.textureCompression = TextureImporterCompression.CompressedHQ; return; }
+            ti.maxTextureSize = 2048;
+            ti.mipmapEnabled = true;
+            ti.anisoLevel = 8;
+            ti.textureCompression = TextureImporterCompression.Compressed;
+            return;
+        }
         if (assetPath.Contains("/Resources/HudArt/")) { OnPreprocessTexture_HudArt(); return; }
         if (assetPath.Contains("/Planets/GalaxyTextures/"))
         {
@@ -181,6 +196,19 @@ public class OrbitRushModelPostprocessor : AssetPostprocessor
             else { material.SetFloat("_Metallic", 0.35f); material.SetFloat("_Smoothness", 0.55f); }
         }
 
+        // Enemy models from the asset packs (generic "Material" names): the FBX carries a white emission colour
+        // but Unity drops the emission map, so the whole body glowed solid white. Keep emission only with a map.
+        if (assetPath.Replace('\\', '/').Contains("/Models/Enemies/"))
+        {
+            var emap = material.HasProperty("_EmissionMap") ? material.GetTexture("_EmissionMap") : null;
+            if (emap == null)
+            {
+                material.SetColor("_EmissionColor", Color.black);
+                material.DisableKeyword("_EMISSION");
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            }
+        }
+
         if (n.Contains("Visor") || n.Contains("M_En_Glass"))
         {
             material.SetFloat("_Smoothness", 0.95f);
@@ -189,7 +217,7 @@ public class OrbitRushModelPostprocessor : AssetPostprocessor
 
         // Planet / weapon materials (data from Blender)
         var entry = FindEntry(n);
-        if (entry != null && (IsPlanet || IsWeapon))
+        if (entry != null && (IsPlanet || IsWeapon || IsProp))
         {
             material.SetFloat("_Smoothness", 1f - Mathf.Clamp01(entry.rough));
             material.SetFloat("_Metallic", Mathf.Clamp01(entry.metal));

@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -12,10 +13,11 @@ namespace OrbitRush
 /// <summary>
 /// Orbit Rush start screen + pause menu, built entirely in code (no scene or asset setup).
 ///
-/// At startup it pauses the game, puts a slowly orbiting camera behind the player (so the galaxy
-/// sky, the planets and the hero are the backdrop), and shows the neon home screen: profile, nav,
-/// feature cards and the big PLAY button. PLAY picks the chosen game mode, unpauses and starts the
-/// match. Esc during a match opens the pause menu (continue / settings / main menu / quit).
+/// At startup it pauses the game, puts a slowly swaying camera behind the player (so the galaxy
+/// sky, the planet and the hero are the backdrop, blurred) and shows the home screen: a left-aligned
+/// text menu in the same Apex look as the HUD. JUGAR picks the chosen game mode, unpauses and starts
+/// the match. Esc during a match opens the pause menu (continue / settings / main menu / quit).
+/// Mouse hover and Up/Down + Enter both drive the entries.
 ///
 /// Installs itself on every scene load that contains a GameManager. Set <see cref="Enabled"/> to
 /// false (or delete this file) to go straight into the match as before.
@@ -27,15 +29,11 @@ public partial class MainMenu : MonoBehaviour
     /// <summary>True while the main menu is up — GameManager waits to start the match.</summary>
     public static bool BlocksStart { get; private set; }
 
-    // ── Palette (matches the Orbit Rush art: navy UI, neon pink / cyan / yellow) ──
-    static readonly Color Navy     = new Color(0.03f, 0.04f, 0.13f, 0.88f);
-    static readonly Color NavyDeep = new Color(0.02f, 0.02f, 0.08f, 0.96f);
-    static readonly Color Pink     = new Color(1.00f, 0.10f, 0.62f);
-    static readonly Color Cyan     = new Color(0.00f, 0.85f, 1.00f);
-    static readonly Color Yellow   = new Color(1.00f, 0.80f, 0.10f);
-    static readonly Color Violet   = new Color(0.60f, 0.30f, 1.00f);
-    static readonly Color White    = new Color(0.96f, 0.96f, 1.00f);
-    static readonly Color Muted    = new Color(0.72f, 0.76f, 0.92f);
+    // ── Palette (same as the HUD: white, soft white, one cyan accent) ──
+    static readonly Color White = Color.white;
+    static readonly Color Soft  = new Color(1f, 1f, 1f, 0.63f);
+    static readonly Color Cyan  = new Color32(0x4F, 0xD6, 0xFF, 255);
+    static readonly Color Track = new Color(1f, 1f, 1f, 0.12f);
 
     const string PrefSensitivity = "OrbitRush.Sensitivity";
     const string PrefVolume      = "OrbitRush.Volume";
@@ -54,10 +52,16 @@ public partial class MainMenu : MonoBehaviour
     private GameObject _modal;
     private Text _toast;
     private float _toastTimer;
-    private Font _font;
+    private Font _font, _fontLight, _fontSemi;
     private Camera _menuCam;
     private Text _mapsSubtitle;
-    private RectTransform _playButton;
+
+    // Text entries: keyboard / gamepad focus moves over whichever list is on screen (home, or the open overlay)
+    private readonly List<MenuItemFx> _pending = new List<MenuItemFx>();     // entries created since the last screen build
+    private List<MenuItemFx> _homeItems = new List<MenuItemFx>();
+    private List<MenuItemFx> _modalItems = new List<MenuItemFx>();
+    private List<MenuItemFx> _items = new List<MenuItemFx>();                // the list that is active right now
+    private int _focus = -1;
 
     private PlayerController _player;
     private PlayerInput _playerInput;
@@ -99,7 +103,10 @@ public partial class MainMenu : MonoBehaviour
     void Awake()
     {
         _font = LoadFont();
-        _modeIndex = Mathf.Clamp(PlayerPrefs.GetInt(PrefMode, 0), 0, Modes.Length - 1);
+        _fontLight = UiFactory.LoadFontLight();
+        _fontSemi = UiFactory.LoadFontSemiBold();
+        MenuItemFx.Hovered += OnItemHover;
+        _modeIndex = Mathf.Clamp(PlayerPrefs.GetInt(PrefMode, Modes.Length - 1), 0, Modes.Length - 1);
 
         // sceneLoaded fires before any Start(), so GameManager.Start() sees this and waits.
         BlocksStart = true;
@@ -116,6 +123,7 @@ public partial class MainMenu : MonoBehaviour
         BuildCanvas();
         BuildHome();
         BuildMenuCamera();
+        ScreenBlur.Request(this, true);          // the world behind the menu goes out of focus
         ShowCursor(true);
     }
 
@@ -129,25 +137,71 @@ public partial class MainMenu : MonoBehaviour
 
         var kb = Keyboard.current;
 
+        if (_dropping || DropSelector.Active) return;      // the drop selector owns the keyboard / Esc
+
         if (_inMenu)
         {
-            if (_playButton != null)
-                _playButton.localScale = Vector3.one * (1f + 0.025f * Mathf.Sin(Time.unscaledTime * 3f));
-
-            if (kb != null)
-            {
-                if (_modal != null && kb.escapeKey.wasPressedThisFrame) CloseModal();
-                else if (_modal == null && kb.enterKey.wasPressedThisFrame) Play("Enter key");   // Enter only: Space is too easy to hit by accident
-            }
+            if (kb != null && _modal != null && kb.escapeKey.wasPressedThisFrame) CloseModal();
+            NavigateEntries(kb);          // Up/Down + Enter (Enter on JUGAR starts the match; Space is deliberately excluded)
             return;
         }
 
         // In a match: Esc toggles the pause menu (not once the match is over — the scoreboard takes over).
-        if (kb != null && kb.escapeKey.wasPressedThisFrame)
+        if (kb != null && kb.escapeKey.wasPressedThisFrame && !ShopPanel.BlocksPause)
         {
             if (_paused) Resume();
             else if (GameManager.Instance != null && GameManager.Instance.IsMatchActive) Pause();
         }
+        if (_paused) NavigateEntries(kb);
+    }
+
+    // ── Keyboard / gamepad focus over the text entries ────────────────────
+
+    private void SetItems(List<MenuItemFx> items)
+    {
+        _items = items ?? new List<MenuItemFx>();
+        _focus = _items.Count > 0 ? 0 : -1;
+        ApplyFocus();
+    }
+
+    private void ApplyFocus()
+    {
+        for (int i = 0; i < _items.Count; i++)
+            if (_items[i] != null) _items[i].SetFocus(i == _focus);
+    }
+
+    private void OnItemHover(MenuItemFx fx)
+    {
+        int i = _items.IndexOf(fx);
+        if (i < 0 || i == _focus) return;
+        _focus = i;
+        ApplyFocus();
+    }
+
+    private void NavigateEntries(Keyboard kb)
+    {
+        if (_items.Count == 0) return;
+
+        int move = 0;
+        if (kb != null)
+        {
+            if (kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame) move = 1;
+            else if (kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame) move = -1;
+        }
+        var pad = Gamepad.current;
+        if (pad != null)
+        {
+            if (pad.dpad.down.wasPressedThisFrame) move = 1;
+            else if (pad.dpad.up.wasPressedThisFrame) move = -1;
+        }
+        if (move != 0)
+        {
+            _focus = _focus < 0 ? 0 : (_focus + move + _items.Count) % _items.Count;
+            ApplyFocus();
+        }
+
+        bool confirm = (kb != null && kb.enterKey.wasPressedThisFrame) || (pad != null && pad.buttonSouth.wasPressedThisFrame);
+        if (confirm && _focus >= 0 && _items[_focus] != null) _items[_focus].Activate();
     }
 
     void LateUpdate()
@@ -159,6 +213,7 @@ public partial class MainMenu : MonoBehaviour
 
     void OnDestroy()
     {
+        MenuItemFx.Hovered -= OnItemHover;
         ScreenBlur.Request(this, false);
         if (_inMenu || _paused) Time.timeScale = 1f;   // never leave the game frozen if this object goes away
         if (_menuCam != null) Destroy(_menuCam.gameObject);
@@ -168,8 +223,11 @@ public partial class MainMenu : MonoBehaviour
     // Game flow
     // ══════════════════════════════════════════════════════════════════════
 
+    private bool _dropping;
+
     private void Play(string reason)
     {
+        if (_dropping) return;
         Debug.Log($"[MainMenu] PLAY via {reason} at t={Time.realtimeSinceStartup:F1}s");
         PlayerPrefs.SetInt(PrefMode, _modeIndex);
         PlayerPrefs.Save();
@@ -178,6 +236,35 @@ public partial class MainMenu : MonoBehaviour
         if (gm != null) gm.SetGameMode(Modes[_modeIndex]);
 
         CloseModal();
+
+        // Before the match: choose the planet and the drop point (cards → satellite → drop pod)
+        if (_player != null && DropSelector.CanRun)
+        {
+            _dropping = true;
+            if (_home != null) _home.SetActive(false);
+            DropSelector.Begin(_player.transform,
+                (pos, rot) =>
+                {
+                    DropSelector.PlacePlayer(_player.transform, pos, rot);
+                    _dropping = false;
+                    StartMatchNow();
+                },
+                () =>
+                {
+                    _dropping = false;
+                    if (_home != null) _home.SetActive(true);
+                    ShowCursor(true);
+                },
+                lockCursorAtEnd: false);
+            return;
+        }
+        StartMatchNow();
+    }
+
+    private void StartMatchNow()
+    {
+        var gm = GameManager.Instance;
+        ScreenBlur.Request(this, false);
         if (_home != null) Destroy(_home);
         if (_menuCam != null) Destroy(_menuCam.gameObject);
 
@@ -200,13 +287,7 @@ public partial class MainMenu : MonoBehaviour
         ScreenBlur.Request(this, true);              // the world behind goes out of focus...
         if (HUD.Instance != null) HUD.Instance.SetHidden(true);   // ...and the HUD fades away
 
-        OpenModal("PAUSA", panel =>
-        {
-            MenuButton(panel, "CONTINUAR", new Vector2(0, 150), Pink, Resume);
-            MenuButton(panel, "AJUSTES", new Vector2(0, 40), Cyan, OpenSettings);
-            MenuButton(panel, "MENÚ PRINCIPAL", new Vector2(0, -70), Violet, BackToMainMenu);
-            MenuButton(panel, "SALIR DEL JUEGO", new Vector2(0, -180), Yellow, QuitGame);
-        }, onClose: Resume);
+        OpenPauseScreen();
     }
 
     private void Resume()
@@ -309,7 +390,10 @@ public partial class MainMenu : MonoBehaviour
     {
         var go = new GameObject("MenuCamera");
         _menuCam = go.AddComponent<Camera>();
-        _menuCam.clearFlags = CameraClearFlags.Skybox;
+        _menuCam.clearFlags = CameraClearFlags.Skybox;         // the galaxy sky behind the planet...
+        _menuCam.backgroundColor = new Color(0.02f, 0.02f, 0.08f);
+        _menuCam.cullingMask = ~LayerMask.GetMask("UI");       // ...and the world itself (ScreenBlur puts it out of focus)
+        _menuCam.GetUniversalAdditionalCameraData().renderPostProcessing = true;   // so the blur volume applies to this camera
         _menuCam.depth = 100f;                 // draws over the game's own camera
         _menuCam.fieldOfView = 50f;
         _menuCam.nearClipPlane = 0.1f;

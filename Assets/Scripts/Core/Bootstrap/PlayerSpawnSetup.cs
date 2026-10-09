@@ -44,10 +44,16 @@ public class PlayerSpawnSetup : MonoBehaviour
         {
             for (int i = 0; i < spawnPointsPerPlanet; i++)
             {
-                Vector3 dir = SphereScatter.RandomDirection(rng);
+                // A planet with a start clearing: everybody (re)spawns around its campfire
+                var start = PlanetZoneMath.ByRole(planet, "inicio");
+                Vector3 dir = start != null
+                    ? PlanetZoneMath.DirAround(start.dir, SphereScatter.NextFloat(rng, 4f, 12f), SphereScatter.NextFloat(rng, 0f, 6.28f), planet.radius)
+                    : SphereScatter.RandomDirection(rng);
                 // Planets with buildings/trees: re-roll a few times so nobody spawns inside one.
                 for (int attempt = 0; attempt < 30 && !IsSpawnClear(planet, dir); attempt++)
-                    dir = SphereScatter.RandomDirection(rng);
+                    dir = start != null
+                        ? PlanetZoneMath.DirAround(start.dir, SphereScatter.NextFloat(rng, 4f, 14f), SphereScatter.NextFloat(rng, 0f, 6.28f), planet.radius)
+                        : SphereScatter.RandomDirection(rng);
                 Vector3 pos = planet.GetSurfacePoint(dir) + dir * hoverHeight;
 
                 var point = new GameObject($"SpawnPoint_{planet.planetName}_{i}");

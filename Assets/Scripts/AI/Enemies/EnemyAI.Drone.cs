@@ -7,9 +7,9 @@ namespace OrbitRush
 /// <summary>
 /// Aerial hunter, the only enemy that travels between planets. A spotlight sweeps the ground while it orbits its
 /// planet; once it finds a player it fixes the light on them, MARKS them on everyone's radar, tracks from above and
-/// behind, makes shooting dives, lobs an EMP orb that jams the jetpack, retreats to recharge and — nearly destroyed —
+/// behind, makes shooting dives, retreats to recharge and — nearly destroyed —
 /// beeps and rams its target. Drones in a group move as a flock and attack from different angles. They follow a
-/// jetpacking player through open space.
+/// player through open space.
 /// </summary>
 public partial class EnemyAI
 {
@@ -24,18 +24,14 @@ public partial class EnemyAI
     public int diveShots = 4;
     public float diveShotInterval = 0.1f;
     public float markSeconds = 7f;
-    public float empInterval = 9f;
-    public float empJamSeconds = 4f;
     public float kamikazeHealthFraction = 0.25f;
     public float kamikazeDamage = 55f;
     public float kamikazeRadius = 7f;
     public float energyMax = 100f;
-    [Tooltip("Prefab of the slow EMP orb (built by EnemySpawnSetup).")]
-    public GameObject empPrefab;
 
     private DroneState _drone = DroneState.Patrol;
     private DivePhase _dive = DivePhase.Cooldown;
-    private float _droneStateTime, _diveTimer, _empTimer, _markTimer, _energy;
+    private float _droneStateTime, _diveTimer, _markTimer, _energy;
     private int _diveShotsLeft;
     private Vector3 _orbitAxis;
     private Light _spot;
@@ -51,7 +47,6 @@ public partial class EnemyAI
         _orbitAxis = Random.onUnitSphere;
         BuildSpotlight();
         Controller.freeFlight = false;
-        _empTimer = Random.Range(3f, empInterval);
     }
 
     private void BuildSpotlight()
@@ -73,7 +68,7 @@ public partial class EnemyAI
     {
         _droneStateTime += dt;
         _energy = Mathf.Min(energyMax, _energy + (_drone == DroneState.Retreat ? 25f : 6f) * dt);
-        _markTimer -= dt; _empTimer -= dt;
+        _markTimer -= dt;
 
         var target = Senses.Target;
         bool detected = target != null && Senses.IsDetected(target);
@@ -124,7 +119,7 @@ public partial class EnemyAI
         }
     }
 
-    // ── Track: light on the target, from above and behind; marks; EMP ────
+    // ── Track: light on the target, from above and behind; marks ────
 
     private void TickDroneTrack(float dt, AISenses.Contact target, bool detected)
     {
@@ -150,14 +145,6 @@ public partial class EnemyAI
         FlyDroneTo(goal, trackSpeed, target);
         Controller.LookAt(target.transform.position);
 
-        // EMP orb
-        if (_empTimer <= 0f && target.visible && empPrefab != null && muzzle != null && target.distance < 55f)
-        {
-            _empTimer = empInterval * Random.Range(0.85f, 1.2f);
-            Vector3 dir = (PredictedAim(target, 0.6f) - muzzle.position).normalized;
-            FireBolt(dir, empPrefab, 4f, 15f, p => { p.empSeconds = empJamSeconds; });
-        }
-
         // After a spell of tracking: a diving attack (if there is energy)
         if (_droneStateTime > 2.4f && target.visible && _energy > 25f && target.distance < 70f) SetDrone(DroneState.Attack);
     }
@@ -178,7 +165,7 @@ public partial class EnemyAI
     private void FlyDroneTo(Vector3 goal, float speed, AISenses.Contact target)
     {
         var pc = target != null && target.stats != null ? target.stats.GetComponent<PlayerController>() : null;
-        bool targetFlying = pc != null && (pc.IsFlying || (!pc.IsGrounded && pc.IsJetpacking));
+        bool targetFlying = false;
         bool otherPlanet = pc != null && pc.CurrentPlanet != null && pc.CurrentPlanet != Controller.CurrentPlanet;
         float distance = target != null ? Vector3.Distance(transform.position, target.transform.position) : 0f;
         bool free = targetFlying || otherPlanet || distance > 110f;
@@ -286,6 +273,7 @@ public partial class EnemyAI
             var d = col.GetComponentInParent<IDamageable>();
             if (d == null || d is EnemyStats || !hit.Add(d)) continue;
             float falloff = 1f - Mathf.Clamp01(Vector3.Distance(centre, col.ClosestPoint(centre)) / kamikazeRadius) * 0.6f;
+            d.RegisterHit(centre);                                // HUD damage-direction arc (and shield ripple)
             d.TakeDamage(kamikazeDamage * falloff, null);
         }
         DeathBurstFx.Play(centre, new Color(1f, 0.4f, 0.1f), Up, 2.2f);

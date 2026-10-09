@@ -1,0 +1,17 @@
+{
+    "planets": [
+        {
+            "child": "Desierto",
+            "radiusMin": 215.99986267089845,
+            "radiusMax": 215.99993896484376,
+            "radiusMean": 215.99990844726563
+        }
+    ],
+    "hasSun": false,
+    "sunEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "unitScale": 100.0
+}

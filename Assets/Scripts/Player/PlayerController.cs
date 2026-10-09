@@ -17,7 +17,7 @@ namespace OrbitRush
 /// - Jump has coyote time (jump a moment after leaving an edge), input buffering (press a moment before
 ///   landing), variable height (release early for a short hop) and a snappier fall.
 /// - The collider is frictionless so you slide along walls and buildings instead of sticking to them.
-/// - Jetpack thrust ramps up and down; sprint and dash add a field-of-view kick.
+/// - Sprint and dash add a field-of-view kick.
 /// - Look input is polled from the mouse / right stick every frame with light smoothing.
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
@@ -76,12 +76,6 @@ public partial class PlayerController : MonoBehaviour
     [Tooltip("Extra field of view (degrees) for a moment after a dash.")]
     public float dashFovBoost = 10f;
 
-    [Header("Jetpack")]
-    public float jetpackForce = 15f;
-    public float jetpackCostPerSecond = 25f;
-    [Tooltip("Seconds for thrust to ramp from 0 to full (and back down) so it doesn't kick like a switch.")]
-    public float jetpackRamp = 0.12f;
-
     [Header("Dash")]
     [Tooltip("Left Alt (keyboard) / D-pad Up (gamepad). On the ground dashes along your move direction; " +
              "in the air dashes where the camera looks, to hop between planets.")]
@@ -114,7 +108,6 @@ public partial class PlayerController : MonoBehaviour
     private Vector2 _yawAccumulator;   // look yaw accumulated between FixedUpdates — applied through the Rigidbody
     private Vector2 _lookSmoothed;
     private bool _jumpHeld;
-    private bool _jetpackHeld;
     private bool _sprintHeld;
 
     private float _jumpBufferTimer;
@@ -126,8 +119,6 @@ public partial class PlayerController : MonoBehaviour
     private float _dashLockTimer;
     private float _dashFovTimer;
 
-    private float _jetpackThrust;      // 0..1 ramp
-    private bool _jetpacking;
     private float _sprintAmount;       // 0..1
     private float _fovBoost;
 
@@ -198,7 +189,6 @@ public partial class PlayerController : MonoBehaviour
         _jumpHeld = v.isPressed;
         if (v.isPressed) { _jumpBufferTimer = jumpBufferTime; _spinQueued = true; GrabMash(); }     // remembered for a short while, not forever
     }
-    public void OnJetpack(InputValue v) => _jetpackHeld = v.isPressed;
     public void OnSprint(InputValue v)  => _sprintHeld  = v.isPressed;
 
     /// <summary>
@@ -235,7 +225,7 @@ public partial class PlayerController : MonoBehaviour
         HandleYaw();
         AlignToPlanet();
         HandleMovement();
-        HandleJetpackSystem();
+        EmitFootsteps(Time.fixedDeltaTime);
         HandleDash();
         HandleJump();
         HandleAirSpin();
@@ -264,8 +254,13 @@ public partial class PlayerController : MonoBehaviour
 
     private float _pitchDelta;   // pitch degrees to apply this frame (already multiplied by sensitivity)
 
+    /// <summary>True while the weapon wheel is open: the camera stays still and the mouse moves the wheel's selector instead.</summary>
+    public static bool LookLocked;
+
     private void PollLook()
     {
+        if (LookLocked) { _lookSmoothed = Vector2.zero; return; }
+
         Vector2 raw = Vector2.zero;
 
         var mouse = Mouse.current;
@@ -325,7 +320,7 @@ public partial class PlayerController : MonoBehaviour
     {
         if (_dashFovTimer > 0f) _dashFovTimer -= Time.deltaTime;
         float dashK = Mathf.Clamp01(_dashFovTimer / 0.35f);
-        float target = _sprintAmount * sprintFovBoost + dashK * dashFovBoost + SonicBlend * sonicFovBoost;
+        float target = _sprintAmount * sprintFovBoost + dashK * dashFovBoost;
         _fovBoost = Mathf.Lerp(_fovBoost, target, 1f - Mathf.Exp(-9f * Time.deltaTime));
     }
 
@@ -338,7 +333,6 @@ public partial class PlayerController : MonoBehaviour
         _dashQueued = false;
 
         if (_dashCooldownTimer > 0f || IsStunned) return;
-        if (_phase == JetpackPhase.Cruise && !_stats.UseJetpack(boostFuel)) return;     // boosting in space burns fuel
         if (!_stats.UseStamina(dashStaminaCost)) return;
 
         Vector3 dir;
@@ -371,9 +365,9 @@ public partial class PlayerController : MonoBehaviour
         Vector3 gravity = _gravity.Gravity;
         float scale = _stats.gravityResistance;
 
-        // Snappier fall: heavier gravity while descending close to a planet (not while jetpacking, and not
+        // Snappier fall: heavier gravity while descending close to a planet (and not
         // out in space between planets where it would just yank you toward the nearest one).
-        if (_currentPlanet != null && !_isGrounded && !_jetpacking)
+        if (_currentPlanet != null && !_isGrounded)
         {
             float upSpeed = Vector3.Dot(_rb.linearVelocity, _planetUp);
             float altitude = PlanetBody.Altitude(transform.position, _currentPlanet);
@@ -393,7 +387,7 @@ public partial class PlayerController : MonoBehaviour
     /// </summary>
     private void AlignToPlanet()
     {
-        PlanetBody.AlignUpright(_rb, transform.forward, _planetUp, alignSpeed * (_phase == JetpackPhase.Captured ? 1.8f : 1f), Time.fixedDeltaTime);
+        PlanetBody.AlignUpright(_rb, transform.forward, _planetUp, alignSpeed, Time.fixedDeltaTime);
     }
 
     /// <summary>
@@ -438,6 +432,18 @@ public partial class PlayerController : MonoBehaviour
         Vector3 wish = Vector3.ProjectOnPlane(transform.right * _moveInput.x + transform.forward * _moveInput.y, _planetUp);
         wish = wish.sqrMagnitude > 0.0001f ? wish.normalized : Vector3.zero;
 
+        // Pressing into a steep wall: drop the part of the input that pushes into it (slide along it, never up it)
+        if (_wallTimer > 0f)
+        {
+            Vector3 wn = Vector3.ProjectOnPlane(_wallNormal, _planetUp);
+            if (wn.sqrMagnitude > 0.0001f)
+            {
+                wn.Normalize();
+                float into = Vector3.Dot(wish, wn);
+                if (into < 0f) wish -= wn * into;
+            }
+        }
+
         Vector3 planar = Vector3.ProjectOnPlane(_rb.linearVelocity, _planetUp);
         float dt = Time.fixedDeltaTime;
 
@@ -454,7 +460,7 @@ public partial class PlayerController : MonoBehaviour
             if (hasInput)
             {
                 // Steer in the air: add speed toward where you press, but only up to the air cap along that
-                // direction. Momentum from a jump, dash or jetpack is never braked.
+                // direction. Momentum from a jump or dash is never braked.
                 float cap = speed * airSpeedMultiplier;
                 float current = Vector3.Dot(planar, wish);
                 float add = Mathf.Clamp(cap * inputMag - current, 0f, airAcceleration * dt);
@@ -473,8 +479,23 @@ public partial class PlayerController : MonoBehaviour
 
     // ── Jump & ground ─────────────────────────────────────────────────────
 
+    private const float MaxWalkableSlope = 50f;     // degrees from the planet's up; steeper surfaces are walls
+    private Vector3 _wallNormal;
+    private float _wallTimer;
+
+    // Remember steep surfaces we are pressing against so movement can slide along them instead of climbing
+    void OnCollisionStay(Collision c)
+    {
+        for (int i = 0; i < c.contactCount; i++)
+        {
+            Vector3 n = c.GetContact(i).normal;
+            if (Vector3.Angle(n, _planetUp) > MaxWalkableSlope) { _wallNormal = n; _wallTimer = 0.1f; return; }
+        }
+    }
+
     private void CheckGrounded()
     {
+        _wallTimer -= Time.fixedDeltaTime;
         _wasGrounded = _isGrounded;
         // The scene's groundMask only covers one layer; the planets of the loaded map live on the Default layer,
         // so always include it. Triggers (pickups, zones) never count as ground.
@@ -487,7 +508,10 @@ public partial class PlayerController : MonoBehaviour
         Vector3 origin = transform.position + _planetUp * (_capsuleHalfHeight * 0.8f);
         float castDistance = _capsuleHalfHeight * 1.1f;
         float castRadius = _capsuleRadius * 0.6f;
-        _isGrounded = Physics.SphereCast(origin, castRadius, -_planetUp, out _, castDistance, mask, QueryTriggerInteraction.Ignore);
+        // Only surfaces that are floor-like relative to the planet's "up" count: walls, building sides and steep
+        // edges are not ground, so the character can't stand on (or climb) them as if they were floor.
+        _isGrounded = Physics.SphereCast(origin, castRadius, -_planetUp, out var groundHit, castDistance, mask, QueryTriggerInteraction.Ignore)
+                      && Vector3.Angle(groundHit.normal, _planetUp) <= MaxWalkableSlope;
 
         // Fallback: math-based check using the planet's declared radius
         // Handles cases where the collider and the PlanetGravity.radius don't align perfectly
@@ -565,7 +589,6 @@ public partial class PlayerController : MonoBehaviour
     public float DashCooldownPercent => dashCooldown > 0f ? Mathf.Clamp01(_dashCooldownTimer / dashCooldown) : 0f;
     public PlanetGravity CurrentPlanet => _currentPlanet;
     public bool IsGrounded => _isGrounded;
-    public bool IsJetpacking => _jetpacking;
 
     /// <summary>Speed along the planet surface (m/s).</summary>
     /// <summary>True while running (Sprint held and actually moving faster than a walk).</summary>

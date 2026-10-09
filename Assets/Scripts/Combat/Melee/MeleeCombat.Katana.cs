@@ -22,7 +22,6 @@ public partial class MeleeCombat
             case State.Stowed: k = 0f; break;
             // The sword leaves the back / returns to it when the hand reaches it (about half way through the clip)
             case State.Drawing: k = Smooth((_stateTime / drawTime - 0.42f) / 0.12f); break;
-            case State.Sheathing: k = 1f - Smooth((_stateTime / drawTime - 0.46f) / 0.12f); break;
             default: k = 1f; break;
         }
 
@@ -108,7 +107,6 @@ public partial class MeleeCombat
     {
         _holding = false; _queuedLight = false; _hitDone = false;
         EnterState(State.Stowed);
-        ReturnGun();
         BlocksFiring = false;
     }
 }

@@ -51,7 +51,6 @@ public partial class PlayerController
     }
 
     public void SimulateCrouch(bool pressed) => _crouchSim = pressed;
-    public void SimulateJetpack(bool pressed) => _jetpackHeld = pressed;
 
     /// <summary>Test hook: turn the player and camera so the crosshair points at a world position.</summary>
     public void DebugAimAt(Vector3 worldPoint)
@@ -84,7 +83,7 @@ public partial class PlayerController
         if (_spinTimer > 0f) _spinTimer -= Time.fixedDeltaTime;
 
         float upSpeed = Vector3.Dot(_rb.linearVelocity, _planetUp);
-        if (wanted && !_isGrounded && _coyoteTimer <= 0f && !_spinUsed && !_jetpacking && upSpeed < 3f)
+        if (wanted && !_isGrounded && _coyoteTimer <= 0f && !_spinUsed && upSpeed < 3f)
         {
             _spinUsed = true;
             _spinTimer = airSpinDuration;
@@ -104,8 +103,7 @@ public partial class PlayerController
     private float AdjustGravityForMovement(ref Vector3 gravity, float scale)
     {
         if (_spinTimer > 0f) scale *= airSpinGravity;
-        if (Time.time < _gravityOffUntil || _sonicActive) scale = 0f;      // just after a jetpack launch the home planet lets go
-        UpdateOrbit(ref gravity);
+                UpdateOrbit(ref gravity);
         return scale;
     }
 
@@ -113,7 +111,7 @@ public partial class PlayerController
     {
         float dt = Time.fixedDeltaTime;
         var planet = _currentPlanet;
-        bool candidate = planet != null && !_isGrounded && !_jetpacking && _phase == JetpackPhase.Idle && !_orbitSpent && gravity.sqrMagnitude > 0.01f
+        bool candidate = planet != null && !_isGrounded && !_orbitSpent && gravity.sqrMagnitude > 0.01f
                          && planet.shape == PlanetGravity.GravityShape.Sphere;
         if (!candidate) { if (_orbiting) EndOrbit(false); return; }
 

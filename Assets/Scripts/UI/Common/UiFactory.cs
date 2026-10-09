@@ -6,9 +6,19 @@ namespace OrbitRush
 /// <summary>Shared UGUI building blocks (rects, font, generated radial sprites) used by HUD, MainMenu and SniperScope.</summary>
 public static class UiFactory
 {
-    public static Font LoadFont()
+    /// <summary>Regular UI font: Inter (Resources/Fonts) when present, else Unity's built-in font.</summary>
+    public static Font LoadFont() => LoadInter("Inter-Regular");
+
+    /// <summary>Light weight (big numbers, timer). Falls back to the regular font.</summary>
+    public static Font LoadFontLight() => LoadInter("Inter-Light");
+
+    /// <summary>Semibold weight (labels, names). Falls back to the regular font.</summary>
+    public static Font LoadFontSemiBold() => LoadInter("Inter-SemiBold");
+
+    static Font LoadInter(string file)
     {
-        var f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        var f = Resources.Load<Font>("Fonts/" + file);
+        if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (f == null) f = Resources.GetBuiltinResource<Font>("Arial.ttf");
         if (f == null) f = Font.CreateDynamicFontFromOSFont("Arial", 16);
         return f;

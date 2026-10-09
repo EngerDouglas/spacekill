@@ -1571,6 +1571,738 @@
    "rough": 0.2,
    "metal": 0.0,
    "alpha": 1.0
+  },
+  {
+   "name": "CD_Fuego",
+   "emit": [
+    1.0,
+    0.1412,
+    0.0
+   ],
+   "strength": 20.0,
+   "rough": 0.5,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "CD_Neon_Cian",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 2.0,
+   "rough": 0.4,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "CD_Neon_Roto",
+   "emit": [
+    1.0,
+    0.0097,
+    0.2918
+   ],
+   "strength": 3.0,
+   "rough": 0.4,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "CD_Metal_Oxidado",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.75,
+   "metal": 0.6,
+   "alpha": 1.0
+  },
+  {
+   "name": "CD_Varilla",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.7,
+   "metal": 0.8,
+   "alpha": 1.0
+  },
+  {
+   "name": "Agua_Estanque",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.05,
+   "metal": 0.0,
+   "alpha": 0.85
+  },
+  {
+   "name": "Sol_Nucleo",
+   "emit": [
+    1.0,
+    0.54,
+    0.01
+   ],
+   "strength": 30.0,
+   "rough": 0.5,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Sol_Corona_Mat",
+   "emit": [
+    1.0,
+    0.25,
+    0.0
+   ],
+   "strength": 8.0,
+   "rough": 0.5,
+   "metal": 0.0,
+   "alpha": 0.35
+  },
+  {
+   "name": "Sol_Halo_Mat",
+   "emit": [
+    1.0,
+    0.14,
+    0.0
+   ],
+   "strength": 4.0,
+   "rough": 0.5,
+   "metal": 0.0,
+   "alpha": 0.12
+  },
+  {
+   "name": "Exp_Amarillo",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.32,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Azul_Profundo",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.3,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Cuerpo_Negro",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.32,
+   "metal": 0.35,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Holo",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 3.0,
+   "rough": 0.0,
+   "metal": 0.0,
+   "alpha": 0.35
+  },
+  {
+   "name": "Exp_Interior",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.5,
+   "metal": 0.2,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Magenta",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.05,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Metal",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.25,
+   "metal": 0.85,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_cyan_10",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 10.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_cyan_12",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 12.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_cyan_6",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 6.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_cyan_8",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 8.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_magenta_3",
+   "emit": [
+    1.0,
+    0.0,
+    0.3916
+   ],
+   "strength": 3.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_magenta_5",
+   "emit": [
+    1.0,
+    0.0,
+    0.3916
+   ],
+   "strength": 5.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_magenta_6",
+   "emit": [
+    1.0,
+    0.0,
+    0.3916
+   ],
+   "strength": 6.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_magenta_9",
+   "emit": [
+    1.0,
+    0.0,
+    0.3916
+   ],
+   "strength": 9.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_orange_5",
+   "emit": [
+    1.0,
+    0.1441,
+    0.0
+   ],
+   "strength": 5.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_orange_6",
+   "emit": [
+    1.0,
+    0.1441,
+    0.0
+   ],
+   "strength": 6.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_pink_10",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 10.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_pink_5",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 5.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_pink_6",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 6.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_pink_8",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 8.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_pink_9",
+   "emit": [
+    1.0,
+    0.007,
+    0.2918
+   ],
+   "strength": 9.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_royal_2.5",
+   "emit": [
+    0.007,
+    0.1274,
+    1.0
+   ],
+   "strength": 2.5,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_violet_5",
+   "emit": [
+    0.2542,
+    0.0242,
+    0.7605
+   ],
+   "strength": 5.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_violet_6",
+   "emit": [
+    0.2542,
+    0.0242,
+    0.7605
+   ],
+   "strength": 6.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_white_10",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 10.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_white_3",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 3.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_white_6",
+   "emit": [
+    0.9131,
+    0.9301,
+    1.0
+   ],
+   "strength": 6.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_yellow_10",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 10.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_yellow_6",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 6.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Neon_yellow_8",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 8.0,
+   "rough": 0.2,
+   "metal": 0.0,
+   "alpha": 1.0
+  },
+  {
+   "name": "Exp_Tapa",
+   "emit": [
+    0.2542,
+    0.0242,
+    0.7605
+   ],
+   "strength": 0.4,
+   "rough": 0.15,
+   "metal": 0.2,
+   "alpha": 0.6
+  },
+  {
+   "name": "Exp_Vidrio",
+   "emit": [
+    0.007,
+    0.1274,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.04,
+   "metal": 0.0,
+   "alpha": 0.1
+  },
+  {
+   "name": "Item_cyan",
+   "emit": [
+    0.0,
+    0.6939,
+    1.0
+   ],
+   "strength": 2.5,
+   "rough": 0.15,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "Item_green",
+   "emit": [
+    0.3372,
+    1.0,
+    0.0
+   ],
+   "strength": 2.5,
+   "rough": 0.15,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "Item_sky",
+   "emit": [
+    0.0356,
+    0.624,
+    1.0
+   ],
+   "strength": 2.5,
+   "rough": 0.15,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "Item_yellow",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 2.5,
+   "rough": 0.15,
+   "metal": 0.1,
+   "alpha": 1.0
+  },
+  {
+   "name": "ItemCaja_magenta",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.3,
+   "alpha": 1.0
+  },
+  {
+   "name": "ItemCaja_orange",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.3,
+   "alpha": 1.0
+  },
+  {
+   "name": "ItemCaja_pink",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.3,
+   "alpha": 1.0
+  },
+  {
+   "name": "ItemCaja_violet",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.3,
+   "metal": 0.3,
+   "alpha": 1.0
+  },
+  {
+   "name": "ItemCelda_green",
+   "emit": [
+    0.3372,
+    1.0,
+    0.0
+   ],
+   "strength": 1.5,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 0.75
+  },
+  {
+   "name": "ItemCelda_sky",
+   "emit": [
+    0.0356,
+    0.624,
+    1.0
+   ],
+   "strength": 1.5,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 0.75
+  },
+  {
+   "name": "ItemCelda_yellow",
+   "emit": [
+    1.0,
+    0.7913,
+    0.0
+   ],
+   "strength": 1.5,
+   "rough": 0.1,
+   "metal": 0.0,
+   "alpha": 0.75
+  },
+  {
+   "name": "Piso",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.2,
+   "metal": 0.3,
+   "alpha": 1.0
+  },
+  {
+   "name": "Orbit_Aro_Elite",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.5,
+   "metal": 0.6,
+   "alpha": 1.0
+  },
+  {
+   "name": "Orbit_Aro_Oro",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.42,
+   "metal": 0.85,
+   "alpha": 1.0
+  },
+  {
+   "name": "Orbit_Aro_Platino",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.38,
+   "metal": 0.9,
+   "alpha": 1.0
+  },
+  {
+   "name": "Orbit_Centro_Oscuro",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.45,
+   "metal": 0.6,
+   "alpha": 1.0
+  },
+  {
+   "name": "Orbit_Simbolo_Elite",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.28,
+   "metal": 0.65,
+   "alpha": 1.0
+  },
+  {
+   "name": "Orbit_Simbolo_Oro",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.28,
+   "metal": 0.65,
+   "alpha": 1.0
+  },
+  {
+   "name": "Orbit_Simbolo_Platino",
+   "emit": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "rough": 0.28,
+   "metal": 0.65,
+   "alpha": 1.0
   }
  ]
 }

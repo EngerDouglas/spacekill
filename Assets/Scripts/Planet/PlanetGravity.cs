@@ -20,6 +20,12 @@ public class PlanetGravity : MonoBehaviour
     [Tooltip("If two fields overlap, the higher priority wins; ties go to the closest one.")]
     public int priority = 0;
 
+    [Header("Places and routes (from <map>_zones.json; empty on planets without them)")]
+    [System.NonSerialized] public System.Collections.Generic.List<PlanetZone> zones;
+    [System.NonSerialized] public System.Collections.Generic.List<Vector3[]> pathArcs;
+    [System.NonSerialized] public float pathHalfWidth;
+    public bool HasZones => zones != null && zones.Count > 0;
+
     [Header("Shape")]
     public GravityShape shape = GravityShape.Sphere;
     [Tooltip("Cylinder only: half the length of the tube along its local Y axis.")]
@@ -47,8 +53,18 @@ public class PlanetGravity : MonoBehaviour
     [Header("Resources")]
     public ResourceType[] resources;
 
+    // ── Size-based tuning ─────────────────────────────────────────────────
+    // The game was tuned on planets of radius ~40. Bigger planets get proportionally more pickups and enemies so they
+    // don't feel empty (capped, so a 360 m planet doesn't get hundreds of AI).
+
+    /// <summary>How many copies of each weapon / grenade pickup this planet gets (1 on a small planet, up to 6).</summary>
+    public int PickupCopies => Mathf.Clamp(Mathf.RoundToInt(radius / 40f), 1, 6);
+
+    /// <summary>Multiplier for the enemy counts per planet (1 on a small planet, up to 3).</summary>
+    public int EnemyScale => Mathf.Clamp(Mathf.RoundToInt(radius / 60f), 1, 3);
+
     public enum GravityShape { Sphere, Cylinder, Plane, Irregular }
-    public enum BiomeType { Rocky, Ice, Volcanic, Gas, Desert, Alien }
+    public enum BiomeType { Rocky, Ice, Volcanic, Gas, Desert, Alien, Forest, Ruins }
     public enum ResourceType { Crystal, Gas, AlienMetal, Lava, Ice }
 
     // Use Start (not OnEnable) so GravitySystem.Instance already exists

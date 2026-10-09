@@ -1,0 +1,17 @@
+{
+    "planets": [
+        {
+            "child": "Ciudad_Destruida",
+            "radiusMin": 120.99099731445313,
+            "radiusMax": 126.49404907226563,
+            "radiusMean": 125.004150390625
+        }
+    ],
+    "hasSun": false,
+    "sunEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "unitScale": 100.0
+}

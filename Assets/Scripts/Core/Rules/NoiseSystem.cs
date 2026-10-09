@@ -10,7 +10,6 @@ public static class Loudness
     public const float Walk = 7f;
     public const float Run = 16f;
     public const float Shoot = 55f;
-    public const float JetpackTakeoff = 95f;
     public const float Explosion = 130f;       // forced landings and explosions: the maximum
 }
 

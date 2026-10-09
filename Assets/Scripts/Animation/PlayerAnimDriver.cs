@@ -137,9 +137,7 @@ public class PlayerAnimDriver : MonoBehaviour
         if (!_controller.IsGrounded)
         {
             float vy = _body != null ? Vector3.Dot(_body.linearVelocity, transform.up) : 0f;
-            // Jetpack flight (launch, cruise, being captured, thrusting) uses the Flying clip; falling fast without thrust still falls
-            string key = (_controller.IsFlying || _controller.IsJetpacking) && !(vy < -14f && !_controller.IsJetpacking) ? CharacterAnimator.Flying
-                       : vy < -14f ? CharacterAnimator.Fall : CharacterAnimator.Air;
+            string key = vy < -14f ? CharacterAnimator.Fall : CharacterAnimator.Air;
             _anim.ClearBaseTargetsExcept(key);
             _anim.SetBase(key, 1f);
             return;

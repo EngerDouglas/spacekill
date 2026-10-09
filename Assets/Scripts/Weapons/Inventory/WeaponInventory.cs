@@ -67,7 +67,7 @@ public class WeaponInventory : MonoBehaviour
         var pickups = FindObjectsByType<WeaponPickup>(FindObjectsSortMode.None);
         var options = new List<WeaponPickup>();
         foreach (var p in pickups)
-            if (p != null && p.weaponPrefab != null) options.Add(p);
+            if (p != null && p.weaponPrefab != null && !(p.weaponPrefab.GetComponent<WeaponBase>() is { IsMelee: true })) options.Add(p);
         if (options.Count == 0) return false;
         return TryPickup(options[Random.Range(0, options.Count)]);
     }
@@ -92,6 +92,35 @@ public class WeaponInventory : MonoBehaviour
         return true;
     }
 
+    public enum GiveResult { Failed, Added, Swapped, Refilled }
+
+    /// <summary>
+    /// Gives the player a weapon from a template (the vending machine). Already carrying that weapon: its magazine is refilled.
+    /// Inventory full: the active weapon is dropped and replaced.
+    /// </summary>
+    public GiveResult GiveWeapon(GameObject template)
+    {
+        var wanted = template != null ? template.GetComponent<WeaponBase>() : null;
+        if (wanted == null) return GiveResult.Failed;
+
+        foreach (var w in _weapons)
+            if (w != null && w.GetType() == wanted.GetType()) { w.currentAmmo = w.maxAmmo; return GiveResult.Refilled; }
+
+        if (_weapons.Count < maxWeapons) { AddWeapon(template, equip: true); return GiveResult.Added; }
+
+        if (_activeIndex < 0) return GiveResult.Failed;
+        DropWeaponAt(_activeIndex, transform.position + transform.forward * 1.5f, Quaternion.LookRotation(transform.forward));
+        AddWeapon(template, equip: true);
+        return GiveResult.Swapped;
+    }
+
+    /// <summary>True when the player already carries a weapon of this class.</summary>
+    public bool Has(System.Type weaponType)
+    {
+        foreach (var w in _weapons) if (w != null && w.GetType() == weaponType) return true;
+        return false;
+    }
+
     private void AddWeapon(GameObject weaponPrefab, bool equip)
     {
         var mount = weaponMount != null ? weaponMount : transform;
@@ -107,7 +136,7 @@ public class WeaponInventory : MonoBehaviour
             return;
         }
 
-        if (!weapon.hasScope && instance.GetComponent<WeaponSight>() == null) instance.AddComponent<WeaponSight>();
+        if (!weapon.hasScope && !weapon.IsMelee && instance.GetComponent<WeaponSight>() == null) instance.AddComponent<WeaponSight>();
 
         weapon.sourcePrefab = weaponPrefab;
         _weapons.Add(weapon);
@@ -240,6 +269,26 @@ public class WeaponInventory : MonoBehaviour
         Equip(next);
     }
 
+    /// <summary>Index of the carried weapon with this name (ignores case and spaces), or -1 if it isn't carried.</summary>
+    public int IndexOfWeapon(string weaponName)
+    {
+        string key = NormalizeName(weaponName);
+        for (int i = 0; i < _weapons.Count; i++)
+            if (_weapons[i] != null && NormalizeName(_weapons[i].weaponName) == key) return i;
+        return -1;
+    }
+
+    /// <summary>Equips the carried weapon with this name (used by the weapon wheel). False if it isn't carried.</summary>
+    public bool TryEquipByName(string weaponName)
+    {
+        int i = IndexOfWeapon(weaponName);
+        if (i < 0) return false;
+        if (i != _activeIndex) Equip(i);
+        return true;
+    }
+
+    private static string NormalizeName(string s) => string.IsNullOrEmpty(s) ? "" : s.Replace(" ", "").ToLowerInvariant();
+
     private void Equip(int index)
     {
         if (_activeIndex >= 0 && _activeIndex < _weapons.Count)
@@ -255,7 +304,7 @@ public class WeaponInventory : MonoBehaviour
 
     public void OnFire(InputValue value)
     {
-        if (value.isPressed) ActiveWeapon?.TryFire();
+        if (value.isPressed && !WeaponWheel.IsOpen && !ShopPanel.IsOpen) ActiveWeapon?.TryFire();
     }
 
     public void OnReload(InputValue value)

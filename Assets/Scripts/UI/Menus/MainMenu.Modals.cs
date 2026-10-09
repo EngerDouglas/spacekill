@@ -1,57 +1,86 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace OrbitRush
 {
 
-/// <summary>Main-menu modal panels (maps, armory, settings...).</summary>
+/// <summary>Menu overlays: pause menu, game-mode picker, armory and settings (Apex look: no panels, hairlines and text).</summary>
 public partial class MainMenu
 {
     // ══════════════════════════════════════════════════════════════════════
-    // Modal panels
+    // Overlays
     // ══════════════════════════════════════════════════════════════════════
 
     private void CloseModal()
     {
         if (_modal != null) { UiAnim.FadeOutAndDestroy(_modal, 0.16f); _modal = null; }
+        _modalItems.Clear();
+        SetItems(_inMenu ? _homeItems : null);
     }
 
-    private void OpenModal(string title, System.Action<Transform> fill, System.Action onClose = null)
+    /// <summary>A full-screen dimmed overlay (it swallows clicks so the screen behind isn't pressed). Returns its root.</summary>
+    private RectTransform NewOverlay(float dimAlpha)
     {
         CloseModal();
-
         var dim = NewRect("Modal", _canvasRoot, CC, CC, Vector2.zero, Vector2.zero);
-        dim.anchorMin = Vector2.zero; dim.anchorMax = Vector2.one; dim.offsetMin = Vector2.zero; dim.offsetMax = Vector2.zero;
-        var dimImg = dim.gameObject.AddComponent<Image>();
-        dimImg.color = new Color(0f, 0f, 0.03f, 0.62f);
-        dimImg.raycastTarget = true;      // swallow clicks so the home screen behind isn't pressed
+        Stretch(dim);
+        var img = dim.gameObject.AddComponent<Image>();
+        img.color = new Color(0f, 0f, 0.02f, dimAlpha);
+        img.raycastTarget = true;
         _modal = dim.gameObject;
-        UiAnim.Intro(dim, 0f, 0.22f, Vector2.zero, 1f);          // the dimmer fades in
-
-        var panel = Box(dim, "Panel", CC, CC, Vector2.zero, new Vector2(980f, 700f), NavyDeep, Pink, 3f);
-        UiAnim.Intro(panel.rectTransform, 0.04f, 0.4f, new Vector2(0f, -50f), 0.9f);
-        Label(panel.transform, title, 54, White, TextAnchor.MiddleCenter, TC, TC, new Vector2(0f, -22f), new Vector2(900f, 70f), FontStyle.BoldAndItalic, outline: Pink);
-
-        var close = Box(panel.transform, "Close", TR, TR, new Vector2(-18f, -18f), new Vector2(64f, 56f), Color.Lerp(NavyDeep, Pink, 0.4f), Pink);
-        Label(close.transform, "X", 34, White, TextAnchor.MiddleCenter, CC, CC, Vector2.zero, new Vector2(64f, 56f));
-        MakeClickable(close, onClose != null ? onClose : CloseModal);
-
-        fill(panel.transform);
-
-        // Title, buttons and rows pop in one after another
-        UiAnim.Stagger(panel.transform, 0.045f, 0.4f, 0.16f, 60f);
+        UiAnim.Intro(dim, 0f, 0.22f, Vector2.zero, 1f, true, true);      // the dimmer fades in
+        return dim;
     }
+
+    /// <summary>
+    /// A centred content overlay: light title with a short cyan rule under it, a "ESC  CERRAR" entry at the top right, and the
+    /// content placed by <paramref name="fill"/> inside a 1000×720 area (positions are relative to its top-centre).
+    /// </summary>
+    private void OpenModal(string title, System.Action<Transform> fill, System.Action onClose = null)
+    {
+        var dim = NewOverlay(0.55f);
+        _pending.Clear();
+
+        var area = NewRect("Content", dim, CC, CC, Vector2.zero, new Vector2(1000f, 720f));
+        Label(area, title, 44, White, TextAnchor.MiddleCenter, TC, TC, new Vector2(0f, -20f), new Vector2(900f, 60f), _fontLight);
+        Box(area, "Rule", TC, TC, new Vector2(0f, -88f), new Vector2(56f, 2f), Cyan);
+
+        fill(area);
+
+        var close = MenuItem(dim, "ESC  CERRAR", new Vector2(-300f, -70f), onClose != null ? onClose : CloseModal, 16, false, 260f, TR);
+        close.label.alignment = TextAnchor.MiddleRight;
+
+        _modalItems = new List<MenuItemFx>(_pending);
+        _pending.Clear();
+        SetItems(_modalItems);
+
+        UiAnim.Stagger(area, 0.045f, 0.4f, 0.1f, 40f, gentle: true);
+    }
+
+    // ── Pause ─────────────────────────────────────────────────────────────
+
+    private void OpenPauseScreen()
+    {
+        var dim = NewOverlay(0.30f);
+        _pending.Clear();
+        BuildColumn(dim, "PAUSA", ModeSubtitle(),
+            new[] { "CONTINUAR", "AJUSTES", "MENÚ PRINCIPAL", "SALIR DEL JUEGO" },
+            new System.Action[] { Resume, OpenSettings, BackToMainMenu, QuitGame },
+            "ESC  continuar      ·      ↑ ↓  moverse      ·      ENTER  elegir");
+        _modalItems = new List<MenuItemFx>(_pending);
+        _pending.Clear();
+        SetItems(_modalItems);
+        UiAnim.Stagger(dim, 0.04f, 0.4f, 0.05f, 40f, gentle: true);
+    }
+
+    // ── Game mode ─────────────────────────────────────────────────────────
 
     private void OpenMaps()
     {
         OpenModal("MODO DE JUEGO", panel =>
         {
-            Label(panel, "Elige cómo quieres jugar. Se aplica al pulsar JUGAR.", 22, Muted, TextAnchor.MiddleCenter, TC, TC, new Vector2(0f, -92f), new Vector2(900f, 30f), FontStyle.Normal);
+            Label(panel, "Elige cómo quieres jugar. Se aplica al pulsar JUGAR.", 16, Soft, TextAnchor.MiddleCenter, TC, TC, new Vector2(0f, -112f), new Vector2(900f, 24f));
             string[] desc =
             {
                 "Todos contra todos: gana quien más bajas consiga.",
@@ -62,12 +91,16 @@ public partial class MainMenu
             {
                 int index = i;
                 bool selected = i == _modeIndex;
-                Color accent = selected ? Pink : Cyan;
-                var btn = Box(panel, "Mode_" + i, CC, CC, new Vector2(0f, 90f - i * 150f), new Vector2(860f, 126f),
-                              selected ? Color.Lerp(NavyDeep, Pink, 0.4f) : Navy, accent);
-                Label(btn.transform, (selected ? "► " : "") + ModeName(i).ToUpper(), 32, White, TextAnchor.UpperLeft, TL, TL, new Vector2(28f, -18f), new Vector2(800f, 40f), FontStyle.BoldAndItalic);
-                Label(btn.transform, desc[i], 21, Muted, TextAnchor.UpperLeft, TL, TL, new Vector2(28f, -66f), new Vector2(800f, 48f), FontStyle.Normal);
-                MakeClickable(btn, () =>
+                var row = NewRect("Mode_" + i, panel, CC, CC, new Vector2(0f, 70f - i * 130f), new Vector2(860f, 112f));
+                var hit = row.gameObject.AddComponent<Image>();
+                hit.color = new Color(1f, 1f, 1f, selected ? 0.05f : 0f);
+
+                Box(row, "Marker", ML, ML, new Vector2(0f, 0f), new Vector2(3f, selected ? 56f : 24f), selected ? Cyan : Track);
+                Label(row, ModeName(i).ToUpper(), 26, selected ? Cyan : White, TextAnchor.UpperLeft, TL, TL, new Vector2(28f, -22f), new Vector2(780f, 36f), _fontSemi);
+                Label(row, desc[i], 17, Soft, TextAnchor.UpperLeft, TL, TL, new Vector2(28f, -62f), new Vector2(800f, 28f));
+                Box(row, "Line", BL, BL, Vector2.zero, new Vector2(860f, 1f), Track);
+
+                MakeClickable(hit, () =>
                 {
                     _modeIndex = index;
                     if (_mapsSubtitle != null) _mapsSubtitle.text = ModeSubtitle();
@@ -76,6 +109,8 @@ public partial class MainMenu
             }
         });
     }
+
+    // ── Armory ────────────────────────────────────────────────────────────
 
     private void OpenArmory()
     {
@@ -88,84 +123,53 @@ public partial class MainMenu
                 { "PLASMA RIFLE",     "Rifle automático de plasma. Cadencia alta; se sobrecalienta." },
                 { "GRAVITY SNIPER",   "Francotirador de precisión. 80 de daño; clic derecho para la mira." },
                 { "ORBITAL LAUNCHER", "Lanzador de energía: el proyectil orbita el planeta y cae con 120 de daño." },
+                { "KATANA",           "Arma cuerpo a cuerpo. Sin munición: ataque ligero, cargado y en esquiva." },
             };
-            Color[] colors = { Yellow, Pink, Cyan, Violet, Pink };
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 6; i++)
             {
-                var row = Box(panel, "Weapon_" + i, CC, CC, new Vector2(0f, 200f - i * 100f), new Vector2(880f, 88f), Navy, colors[i]);
-                Label(row.transform, weapons[i, 0], 28, White, TextAnchor.UpperLeft, TL, TL, new Vector2(22f, -10f), new Vector2(780f, 36f), FontStyle.BoldAndItalic);
-                Label(row.transform, weapons[i, 1], 19, Muted, TextAnchor.UpperLeft, TL, TL, new Vector2(22f, -48f), new Vector2(840f, 30f), FontStyle.Normal);
+                var row = NewRect("Weapon_" + i, panel, CC, CC, new Vector2(0f, 190f - i * 86f), new Vector2(880f, 76f));
+                Label(row, weapons[i, 0], 22, White, TextAnchor.UpperLeft, TL, TL, new Vector2(8f, -8f), new Vector2(780f, 30f), _fontSemi);
+                Label(row, weapons[i, 1], 16, Soft, TextAnchor.UpperLeft, TL, TL, new Vector2(8f, -42f), new Vector2(860f, 24f));
+                Box(row, "Line", BL, BL, Vector2.zero, new Vector2(880f, 1f), Track);
             }
-            Label(panel, "Recoge armas del suelo para equiparlas (teclas 1 / 2 para cambiar).\nGranadas: Q · Bomba especial: F", 21, Cyan, TextAnchor.MiddleCenter,
-                  BC, BC, new Vector2(0f, 28f), new Vector2(900f, 70f), FontStyle.Normal);
+            Label(panel, "Recoge armas del suelo para equiparlas. Mantén Tab para abrir la rueda de armas.\nGranadas: Q  ·  Bomba especial: F",
+                  16, Cyan, TextAnchor.MiddleCenter, BC, BC, new Vector2(0f, 20f), new Vector2(900f, 56f));
         });
     }
 
+    // ── Settings ──────────────────────────────────────────────────────────
+
     private void OpenSettings()
     {
-        // Settings can be opened from the pause menu, which is itself a modal: keep the pause state.
+        // Settings can be opened from the pause menu, which is itself an overlay: keep the pause state.
         bool fromPause = _paused;
         OpenModal("AJUSTES", panel =>
         {
             float sens = _player != null ? Mathf.Clamp(PlayerPrefs.GetFloat(PrefSensitivity, _player.lookSensitivity), 0.04f, 0.4f) : 0.15f;
-            Label(panel, "Sensibilidad del ratón", 26, White, TextAnchor.MiddleLeft, TL, TL, new Vector2(60f, -130f), new Vector2(500f, 36f));
-            MakeSlider(panel, new Vector2(60f, -176f), new Vector2(860f, 36f), 0.04f, 0.4f, sens, v =>
+            Label(panel, "Sensibilidad del ratón", 20, White, TextAnchor.MiddleLeft, TL, TL, new Vector2(60f, -140f), new Vector2(500f, 30f), _fontSemi);
+            MakeSlider(panel, new Vector2(60f, -186f), new Vector2(880f, 36f), 0.04f, 0.4f, sens, v =>
             {
                 PlayerPrefs.SetFloat(PrefSensitivity, v);
                 ApplySensitivity(v);
             });
 
-            Label(panel, "Volumen", 26, White, TextAnchor.MiddleLeft, TL, TL, new Vector2(60f, -250f), new Vector2(500f, 36f));
-            MakeSlider(panel, new Vector2(60f, -296f), new Vector2(860f, 36f), 0f, 1f, AudioListener.volume, v =>
+            Label(panel, "Volumen", 20, White, TextAnchor.MiddleLeft, TL, TL, new Vector2(60f, -260f), new Vector2(500f, 30f), _fontSemi);
+            MakeSlider(panel, new Vector2(60f, -306f), new Vector2(880f, 36f), 0f, 1f, AudioListener.volume, v =>
             {
                 AudioListener.volume = v;
                 PlayerPrefs.SetFloat(PrefVolume, v);
             });
 
-            MenuButton(panel, Screen.fullScreen ? "PANTALLA COMPLETA: SÍ" : "PANTALLA COMPLETA: NO", new Vector2(0f, -40f), Cyan, () =>
+            MenuItem(panel, Screen.fullScreen ? "Pantalla completa:  SÍ" : "Pantalla completa:  NO", new Vector2(40f, -390f), () =>
             {
                 Screen.fullScreenMode = Screen.fullScreen ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
                 OpenSettings();
-            }, 760f, 78f);
-            MenuButton(panel, "SALIR DEL JUEGO", new Vector2(0f, -140f), Yellow, QuitGame, 760f, 78f);
-            Label(panel, "Controles: WASD mover · Espacio saltar · Ctrl jetpack · Alt dash · Q/F granadas · Esc pausa",
-                  18, Muted, TextAnchor.MiddleCenter, BC, BC, new Vector2(0f, 24f), new Vector2(940f, 28f), FontStyle.Normal);
+            }, 26, false, 700f, TL);
+            MenuItem(panel, "Salir del juego", new Vector2(40f, -462f), QuitGame, 26, false, 700f, TL);
+
+            Label(panel, "WASD mover  ·  Espacio saltar  ·  Alt dash  ·  C esquiva  ·  Q / F granadas  ·  Tab rueda de armas  ·  Esc pausa",
+                  14, Soft, TextAnchor.MiddleCenter, BC, BC, new Vector2(0f, 20f), new Vector2(960f, 24f));
         }, onClose: fromPause ? (System.Action)Pause : CloseModal);
-    }
-
-    private Slider MakeSlider(Transform parent, Vector2 pos, Vector2 size, float min, float max, float value, UnityEngine.Events.UnityAction<float> onChange)
-    {
-        var rt = NewRect("Slider", parent, TL, TL, pos, size);
-        var slider = rt.gameObject.AddComponent<Slider>();
-
-        var back = Box(rt, "Background", CC, CC, Vector2.zero, new Vector2(size.x, 14f), new Color(0.12f, 0.08f, 0.25f, 1f), Cyan, 1.5f);
-        back.rectTransform.anchorMin = new Vector2(0f, 0.5f); back.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-        back.rectTransform.offsetMin = new Vector2(0f, -7f); back.rectTransform.offsetMax = new Vector2(0f, 7f);
-
-        var fillArea = NewRect("Fill Area", rt, CC, CC, Vector2.zero, Vector2.zero);
-        fillArea.anchorMin = new Vector2(0f, 0.5f); fillArea.anchorMax = new Vector2(1f, 0.5f);
-        fillArea.offsetMin = new Vector2(0f, -7f); fillArea.offsetMax = new Vector2(0f, 7f);
-        var fill = Box(fillArea, "Fill", CC, CC, Vector2.zero, Vector2.zero, Pink);
-        fill.rectTransform.anchorMin = new Vector2(0f, 0f); fill.rectTransform.anchorMax = new Vector2(0f, 1f);
-        fill.rectTransform.offsetMin = Vector2.zero; fill.rectTransform.offsetMax = new Vector2(8f, 0f);
-
-        var handleArea = NewRect("Handle Slide Area", rt, CC, CC, Vector2.zero, Vector2.zero);
-        handleArea.anchorMin = Vector2.zero; handleArea.anchorMax = Vector2.one;
-        handleArea.offsetMin = new Vector2(14f, 0f); handleArea.offsetMax = new Vector2(-14f, 0f);
-        var handle = Box(handleArea, "Handle", CC, CC, Vector2.zero, new Vector2(28f, 44f), White, Pink);
-        handle.rectTransform.anchorMin = new Vector2(0f, 0f); handle.rectTransform.anchorMax = new Vector2(0f, 1f);
-        handle.rectTransform.sizeDelta = new Vector2(28f, 0f);
-        handle.raycastTarget = true;
-
-        slider.fillRect = fill.rectTransform;
-        slider.handleRect = handle.rectTransform;
-        slider.targetGraphic = handle;
-        slider.direction = Slider.Direction.LeftToRight;
-        slider.minValue = min;
-        slider.maxValue = max;
-        slider.SetValueWithoutNotify(Mathf.Clamp(value, min, max));
-        slider.onValueChanged.AddListener(onChange);
-        return slider;
     }
 }
 }

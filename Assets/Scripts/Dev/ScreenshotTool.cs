@@ -397,69 +397,6 @@ public class ScreenshotTool : MonoBehaviour
                 WeaponAim.DebugForceAim = true;
                 break;
             }
-            case "jpdebug":
-            {
-                yield return new WaitForSecondsRealtime(1.0f);
-                var jv = p.GetComponent<JetpackVisual>();
-                Debug.Log($"[JPDEBUG] JetpackVisual present={jv != null} ready={(jv != null && jv.Ready)}");
-                var pack = p.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Jetpack");
-                if (pack != null)
-                {
-                    var rs = pack.GetComponentsInChildren<Renderer>(true);
-                    Debug.Log($"[JPDEBUG] pack at {pack.position} player at {p.transform.position} lossy={pack.lossyScale} renderers={rs.Length} enabled={(rs.Length > 0 && rs[0].enabled)} bounds={(rs.Length > 0 ? rs[0].bounds.size.ToString() : "-")} layer={pack.gameObject.layer} active={pack.gameObject.activeInHierarchy}");
-                    foreach (var r in rs) Debug.Log($"[JPDEBUG] renderer {r.name} type={r.GetType().Name} mat={(r.sharedMaterial != null ? r.sharedMaterial.name : "null")} shader={(r.sharedMaterial != null ? r.sharedMaterial.shader.name : "-")}");
-                }
-                else Debug.Log("[JPDEBUG] no 'Jetpack' child found");
-                break;
-            }
-            case "jppack":
-            case "jppackfire":
-            {
-                yield return new WaitForSecondsRealtime(1.0f);
-                if (act == "jppackfire") p.SimulateJetpack(true);
-                yield return new WaitForSecondsRealtime(0.7f);
-                foreach (var other in FindObjectsByType<Camera>(FindObjectsSortMode.None)) other.enabled = false;
-                var cg = new GameObject("PackCam"); var pcam = cg.AddComponent<Camera>(); pcam.tag = "MainCamera";
-                pcam.fieldOfView = 40f; pcam.nearClipPlane = 0.05f;
-                Vector3 chest = p.transform.position + p.transform.up * 0.45f;
-                cg.transform.position = chest - p.transform.forward * 1.5f + p.transform.up * 0.35f + p.transform.right * 0.35f;
-                cg.transform.rotation = Quaternion.LookRotation(chest - cg.transform.position, p.transform.up);
-                break;
-            }
-            case "jpcharge":
-            case "jpfly":
-            case "jpglow":
-            {
-                PlanetGravity target = null; float bd = 1e9f;
-                foreach (var pl in GravitySystem.Instance.Planets)
-                {
-                    if (pl == p.CurrentPlanet) continue;
-                    float d = Vector3.Distance(pl.transform.position, p.transform.position);
-                    if (d < bd) { bd = d; target = pl; }
-                }
-                if (target != null)
-                {
-                    var home = p.CurrentPlanet;
-                    Vector3 toT = (target.transform.position - home.transform.position).normalized;
-                    Vector3 spot = home.GetSurfacePoint(toT) + toT * 1.2f;
-                    var rb0 = p.GetComponent<Rigidbody>();
-                    rb0.position = spot; rb0.linearVelocity = Vector3.zero;
-                    rb0.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(Vector3.up + Vector3.right * 0.3f, toT).normalized, toT);
-                    p.transform.SetPositionAndRotation(spot, rb0.rotation);
-                    yield return new WaitForSecondsRealtime(1.2f);
-                }
-                p.GetComponent<WeaponAim>().DebugSetFirstPerson(false);
-                yield return new WaitForSecondsRealtime(1.0f);
-                if (act != "jpglow" && target != null) p.DebugAimAt(target.transform.position);
-                p.SimulateJetpack(true);
-                if (act == "jpfly")
-                {
-                    yield return new WaitForSecondsRealtime(1.5f);
-                    p.SimulateJetpack(false);
-                    yield return new WaitForSecondsRealtime(1.2f);
-                }
-                break;
-            }
             case "robot":
             case "robotheal":
             {

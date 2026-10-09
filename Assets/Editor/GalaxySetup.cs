@@ -22,12 +22,21 @@ public static class GalaxySetup
         for (int i = 0; i < a.Length - 1; i++) if (a[i] == name) return a[i + 1];
         return fallback;
     }
-    static string MapName => Arg("-mapName", "Planetas");
-    static string FbxPath => $"Assets/Resources/Planets/{MapName}.fbx";
+    static string MapName => Arg("-mapName", "Planeta_Bosque");
+    static string FbxPathOf(string map) => $"Assets/Resources/Planets/{map}.fbx";
+    static string FbxPath => FbxPathOf(MapName);
+
+    /// <summary>The planet models GalaxyLoader loads (one FBX each). BuildAll processes all of them.</summary>
+    public static readonly string[] AllMaps = { "Planeta_Bosque", "Planeta_Ciudad_Destruida", "Planeta_Desierto" };
+
+    /// <summary>What the last BuildAll / BuildCollision did, for the log and for the editor trigger.</summary>
+    public static string LastReport = "";
 
     // Materials whose geometry is decoration only: never collides
-    static readonly string[] NoCollision = { "Humo", "Agua", "Waterfall", "Fuego", "Hielo_Lago", "Junco", "Pasto", "Flor_", "Hongo_", "Lodo", "Grass", "Fog", "Cloud", "Nube", "Smoke", "Particle", "Glow_Halo" };
+    static readonly string[] NoCollision = { "Humo", "Agua", "Waterfall", "Fuego", "Hielo_Lago", "Junco", "Pasto", "Flor_", "Hongo_", "Lodo", "Grass", "Fog", "Cloud", "Nube", "Smoke", "Particle", "Glow_Halo", "CD_Fuego", "CD_Neon" };
     const float MinHeight = 0.9f;      // obstacles must stick out of the ground by at least this many metres
+    /// <summary>The ruined city is covered in knee-high debris (tens of thousands of pieces): only things taller than the player count as solid there.</summary>
+    static float MinHeightFor(string map) => map.Contains("Ciudad") ? 1.6f : MinHeight;
 
     [System.Serializable] class PlanetInfo { public string child; public float radiusMin, radiusMax, radiusMean; }
     [System.Serializable] class Layout { public PlanetInfo[] planets; public bool hasSun; public Vector3 sunEuler; public float unitScale; }
@@ -46,11 +55,36 @@ public static class GalaxySetup
         EditorApplication.Exit(0);
     }
 
+    /// <summary>Builds the collision and layout of one planet model (-mapName). Batch mode exits afterwards.</summary>
     public static void BuildCollision()
     {
-        var go = AssetDatabase.LoadAssetAtPath<GameObject>(FbxPath);
-        if (go == null) { Debug.Log("[GalaxySetup] no model " + FbxPath); EditorApplication.Exit(1); return; }
-        string outDir = $"Assets/Resources/Planets/MapCol/{MapName}";
+        LastReport = "";
+        bool ok = BuildMap(MapName);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        if (Application.isBatchMode) EditorApplication.Exit(ok ? 0 : 1);
+    }
+
+    /// <summary>Builds the collision and layout of every planet model in <see cref="AllMaps"/>.</summary>
+    [MenuItem("OrbitRush/Rebuild planet collision (all maps)")]
+    public static void BuildAll()
+    {
+        LastReport = "";
+        bool all = true;
+        foreach (var m in AllMaps) all &= BuildMap(m);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[GalaxySetup] BuildAll finished. " + (all ? "OK" : "WITH ERRORS") + "\n" + LastReport);
+        if (Application.isBatchMode) EditorApplication.Exit(all ? 0 : 1);
+    }
+
+    static void Report(string line) { Debug.Log(line); LastReport += line + "\n"; }
+
+    static bool BuildMap(string mapName)
+    {
+        var go = AssetDatabase.LoadAssetAtPath<GameObject>(FbxPathOf(mapName));
+        if (go == null) { Report("[GalaxySetup] no model " + FbxPathOf(mapName)); return false; }
+        string outDir = $"Assets/Resources/Planets/MapCol/{mapName}";
         Directory.CreateDirectory(outDir);
 
         var layout = new Layout { unitScale = 1f };
@@ -118,12 +152,12 @@ public static class GalaxySetup
             for (int i = 0; i < tris.Count; i += 3)
             {
                 int root = Find(map[tris[i]]);
-                if (rmax[root] - rmin[root] < MinHeight) continue;
+                if (rmax[root] - rmin[root] < MinHeightFor(mapName)) continue;
                 comps.Add(root);
                 kept.Add(tris[i]); kept.Add(tris[i + 1]); kept.Add(tris[i + 2]);
             }
             SaveMesh(verts, kept, $"{outDir}/OBS_{key}.asset", "OBS_" + key);
-            Debug.Log($"[GalaxySetup] {key}: scale={scale} terrain tris={groundTris.Count / 3} radius {gMin:F1}..{gMax:F1} (mean {gSum / Mathf.Max(1, gCount):F1}); obstacles {comps.Count} pieces, {kept.Count / 3} tris");
+            Report($"[GalaxySetup] {mapName}/{key}: scale={scale} terrain tris={groundTris.Count / 3} radius {gMin:F1}..{gMax:F1} (mean {gSum / Mathf.Max(1, gCount):F1}); obstacles {comps.Count} pieces, {kept.Count / 3} tris");
         }
         layout.planets = infos.ToArray();
 
@@ -131,10 +165,8 @@ public static class GalaxySetup
         foreach (var t in go.GetComponentsInChildren<Transform>(true))
             if (t.name == "Sol") { layout.hasSun = true; layout.sunEuler = t.rotation.eulerAngles; }
 
-        File.WriteAllText($"Assets/Resources/Planets/{MapName}_layout.json", JsonUtility.ToJson(layout, true));
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-        EditorApplication.Exit(0);
+        File.WriteAllText($"Assets/Resources/Planets/{mapName}_layout.json", JsonUtility.ToJson(layout, true));
+        return true;
     }
 
     /// <summary>Saves the given triangles of the model's own vertex array (local space) as a compact mesh asset.</summary>

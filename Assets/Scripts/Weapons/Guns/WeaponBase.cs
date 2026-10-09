@@ -45,8 +45,6 @@ public abstract class WeaponBase : MonoBehaviour
 
     protected PlayerController _owner;
     protected PlayerStats _ownerStats;
-    private MeleeCombat _ownerMelee;
-
     public enum WeaponSlot { Primary, Secondary }
     public enum GripType { Rifle, Pistol }
 
@@ -98,10 +96,12 @@ public abstract class WeaponBase : MonoBehaviour
     /// <summary>Raised whenever any weapon fires (drives the firing animation).</summary>
     public static event System.Action<WeaponBase> AnyFired;
 
+    /// <summary>Melee items (the katana) have no ammo and never fire; MeleeCombat drives their attacks.</summary>
+    public virtual bool IsMelee => false;
+
     public bool TryFire()
     {
-        if (_ownerMelee == null && _owner != null) _ownerMelee = _owner.GetComponent<MeleeCombat>();
-        if (_ownerMelee != null && _ownerMelee.BlocksFiring) return false;   // katana drawn
+        if (IsMelee) return false;
         if (_isReloading) return false;
         if (currentAmmo <= 0) { StartReload(); return false; }
         if (Time.time < _nextFireTime) return false;
@@ -148,15 +148,18 @@ public abstract class WeaponBase : MonoBehaviour
     {
         if (projectilePrefab == null || muzzle == null) return;
 
-        // Apply spread (flying with the jetpack is much less accurate)
-        float spreadNow = _owner != null && _owner.IsFlying ? Mathf.Max(spread, 2f) * 2.5f : spread;
+        // Apply spread
+        float spreadNow = spread;
         if (spreadNow > 0f)
         {
-            direction = Quaternion.Euler(
+            // Spread around the shot's own axes (not the world's): on a planet "world up" is meaningless
+            Vector3 up = _owner != null ? _owner.transform.up : Vector3.up;
+            if (Mathf.Abs(Vector3.Dot(direction, up)) > 0.99f) up = Vector3.Cross(direction, Vector3.right);
+            direction = Quaternion.LookRotation(direction, up) * Quaternion.Euler(
                 Random.Range(-spreadNow, spreadNow),
                 Random.Range(-spreadNow, spreadNow),
                 0f
-            ) * direction;
+            ) * Vector3.forward;
         }
 
         ProjectileFactory.Spawn(projectilePrefab, muzzle.position, direction, _owner?.gameObject, _owner?.CurrentPlanet,

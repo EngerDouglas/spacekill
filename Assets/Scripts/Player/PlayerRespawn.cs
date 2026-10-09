@@ -77,6 +77,12 @@ public class PlayerRespawn : MonoBehaviour
         }
 
         screen.Hide();
+        // Choose where to come back: planet cards → satellite view → drop pod (falls back to a random spawn point)
+        if (DropSelector.CanRun)
+        {
+            DropSelector.Begin(transform, (pos, rot) => Respawn(pos, rot));
+            yield break;
+        }
         Respawn();
     }
 
@@ -91,9 +97,14 @@ public class PlayerRespawn : MonoBehaviour
     private void Respawn()
     {
         var spawn = GameManager.Instance != null ? GameManager.Instance.GetSpawnPoint() : transform;
+        Respawn(spawn.position, spawn.rotation);
+    }
+
+    private void Respawn(Vector3 position, Quaternion rotation)
+    {
         _rb.isKinematic = false;
-        transform.SetPositionAndRotation(spawn.position, spawn.rotation);
-        _rb.position = spawn.position; _rb.rotation = spawn.rotation;
+        transform.SetPositionAndRotation(position, rotation);
+        _rb.position = position; _rb.rotation = rotation;
         _rb.linearVelocity = Vector3.zero;
         _rb.angularVelocity = Vector3.zero;
 

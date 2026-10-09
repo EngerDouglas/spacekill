@@ -96,15 +96,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Jetpack",
-                    "type": "Button",
-                    "id": "a1b2c3d4-2222-4a22-9a22-2a2a2a2a2a02",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "ThrowGrenade",
                     "type": "Button",
                     "id": "a1b2c3d4-3333-4a33-9a33-3a3a3a3a3a03",
@@ -546,28 +537,6 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Reload",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "b1b2c3d4-3333-4b33-9b33-3b3b3b3b3b03",
-                    "path": "<Keyboard>/leftCtrl",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Keyboard&Mouse",
-                    "action": "Jetpack",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "b1b2c3d4-4444-4b44-9b44-4b4b4b4b4b04",
-                    "path": "<Gamepad>/rightTrigger",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Gamepad",
-                    "action": "Jetpack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

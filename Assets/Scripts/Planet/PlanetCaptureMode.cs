@@ -28,21 +28,34 @@ public class PlanetCaptureMode : MonoBehaviour
         public float progress;          // -1 = Cyan owns, +1 = Pink owns
         public Team owner = Team.None;
         public Renderer beacon;
+        public float zone;              // capture radius for this planet
+        public float size = 1f;         // 1 on a small planet, up to 4 on a big one
     }
 
     private readonly List<Point> _points = new();
     private readonly Dictionary<Team, float> _scoreRemainder = new();
     private GameManager _gm;
 
+    /// <summary>Planets with places put the capture point on their lookout ("captura" zone); the others on top.</summary>
+    private static Vector3 CaptureDirection(PlanetGravity planet)
+    {
+        var zone = PlanetZoneMath.ByRole(planet, "captura");
+        return zone != null ? zone.dir : Vector3.up;
+    }
+
     void Start()
     {
         _gm = GameManager.Instance;
         foreach (var planet in FindObjectsByType<PlanetGravity>(FindObjectsSortMode.None))
         {
+            // The point sits on the planet's real surface at its "north pole", and the zone grows with big planets
+            float size = Mathf.Clamp(planet.radius / 40f, 1f, 4f);
             var p = new Point
             {
                 planet = planet,
-                position = planet.transform.position + Vector3.up * planet.radius
+                position = planet.GetSurfacePoint(CaptureDirection(planet)),
+                size = size,
+                zone = zoneRadius * size,
             };
             p.beacon = CreateBeacon(p);
             _points.Add(p);
@@ -67,7 +80,7 @@ public class PlanetCaptureMode : MonoBehaviour
         foreach (var player in _gm.Players)
         {
             if (player == null || !player.IsAlive) continue;
-            if ((player.transform.position - point.position).sqrMagnitude > zoneRadius * zoneRadius) continue;
+            if ((player.transform.position - point.position).sqrMagnitude > point.zone * point.zone) continue;
             if (player.team == Team.Pink) pink++;
             else if (player.team == Team.Cyan) cyan++;
         }
@@ -114,8 +127,10 @@ public class PlanetCaptureMode : MonoBehaviour
         if (col != null) Destroy(col);
 
         go.transform.SetParent(transform, false);
-        go.transform.position = point.position + Vector3.up * 3f;
-        go.transform.localScale = new Vector3(0.5f, 3f, 0.5f);
+        Vector3 up = point.planet.GetSurfaceUp(point.position);
+        go.transform.position = point.position + up * (3f * point.size);
+        go.transform.rotation = Quaternion.FromToRotation(Vector3.up, up);
+        go.transform.localScale = new Vector3(0.5f * point.size, 3f * point.size, 0.5f * point.size);
 
         var rend = go.GetComponent<Renderer>();
         point.beacon = rend;

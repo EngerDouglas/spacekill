@@ -1,0 +1,17 @@
+{
+    "planets": [
+        {
+            "child": "Bosque",
+            "radiusMin": 228.16989135742188,
+            "radiusMax": 228.1699676513672,
+            "radiusMean": 228.16993713378907
+        }
+    ],
+    "hasSun": false,
+    "sunEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "unitScale": 100.0
+}

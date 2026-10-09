@@ -55,10 +55,6 @@ public class AISenses : MonoBehaviour
     [Header("Memory")]
     public float memorySeconds = 10f;
 
-    [Header("Heat sensor (drones)")]
-    public bool heatSensor = false;
-    public float heatRange = 120f;
-
     /// <summary>Where the enemy is looking from (defaults to the pivot raised by eyeHeight).</summary>
     public Transform eye;
     /// <summary>Extra yaw (degrees) of the "head" relative to the body: the robot's scanning sweep.</summary>
@@ -188,14 +184,7 @@ public class AISenses : MonoBehaviour
         if (!seen && footprintRadius > 0f && d <= footprintRadius && Vector3.Dot(to, -UpDir) > 0f && HasLineOfSight(eyePos, chest, c))
             seen = true;
 
-        // Heat sensor: a lit jetpack shows up from far away, whatever the cone says
         float heatBoost = 1f;
-        if (!seen && heatSensor && c.stats != null && d <= heatRange)
-        {
-            var pc = c.stats.GetComponent<PlayerController>();
-            if (pc != null && (pc.IsJetpacking || pc.Phase == JetpackPhase.Charging) && HasLineOfSight(eyePos, chest, c, ignoreHorizon: false))
-            { seen = true; heatBoost = 3f; }
-        }
 
         c.visible = seen; c.peripheral = peripheral;
         if (seen)
@@ -212,7 +201,7 @@ public class AISenses : MonoBehaviour
         }
     }
 
-    /// <summary>How alarming the contact's behaviour is: running, shooting and jetpacking fill the meter faster, crouching slower.</summary>
+    /// <summary>How alarming the contact's behaviour is: running and shooting fill the meter faster, crouching slower.</summary>
     private float ActionFactor(Contact c)
     {
         float f = 1f;
@@ -220,7 +209,6 @@ public class AISenses : MonoBehaviour
         if (pc != null)
         {
             if (pc.IsRunning) f *= 1.6f;
-            if (pc.IsFlying || pc.IsJetpacking) f *= 2f;
             if (pc.IsCrouching) f *= 0.5f;
         }
         if (NoiseSystem.TryHear(transform.position, 1000f, 1f, out var n) && n.source == c.transform.gameObject && n.loudness >= Loudness.Shoot) f *= 2f;

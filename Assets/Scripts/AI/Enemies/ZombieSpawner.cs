@@ -6,7 +6,7 @@ namespace OrbitRush
 
 /// <summary>
 /// Zombies rise out of the ground in set zones when there is noise nearby. A few already wander each planet at the
-/// start of the match; the total is capped. Keep the horde in mind: gunfire and jetpack take-offs are what summons it.
+/// start of the match; the total is capped. Keep the horde in mind: gunfire is what summons it.
 /// </summary>
 public class ZombieSpawner : MonoBehaviour
 {
@@ -26,7 +26,13 @@ public class ZombieSpawner : MonoBehaviour
     {
         zombiePrefab = prefab;
         initialPerPlanet = perPlanet;
-        foreach (var p in points) if (p != null) _zones.Add(new Zone { point = p, readyAt = Time.time + 10f });
+        foreach (var p in points)
+        {
+            if (p == null) continue;
+            var info = p.GetComponent<SpawnPointInfo>();
+            if (info != null && info.role != "horda") continue;       // planets with places: the horde belongs to its own place
+            _zones.Add(new Zone { point = p, readyAt = Time.time + 10f });
+        }
 
         // The initial stragglers: wandering, not risen from the ground
         var byPlanet = new Dictionary<string, List<Zone>>();
@@ -93,8 +99,12 @@ public class ZombieSpawner : MonoBehaviour
     public GameObject Spawn(Transform point, bool rising, float jitter = 0f)
     {
         if (zombiePrefab == null || point == null) return null;
+        // A planet with its own roster raises its own melee enemies (none = no horde there)
+        var prefab = zombiePrefab;
+        var roster = EnemyRoster.For(PlanetKey(point.name).Replace("SpawnPoint_", ""));
+        if (roster != null) { prefab = EnemyRoster.Pick(roster.zombies); if (prefab == null) return null; }
         Vector3 offset = jitter > 0f ? Vector3.ProjectOnPlane(Random.insideUnitSphere * jitter, point.up) : Vector3.zero;
-        var go = Instantiate(zombiePrefab, point.position + offset, point.rotation);
+        var go = Instantiate(prefab, point.position + offset, point.rotation);
         go.SetActive(true);
         var home = go.GetComponent<EnemyHome>();
         if (home == null) home = go.AddComponent<EnemyHome>();

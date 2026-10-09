@@ -25,6 +25,18 @@ public class ScreenBlur : MonoBehaviour
     private Volume _scopeVolume;
     private float _scopeWeight;
 
+    // Strong variant (weapon wheel): a Bokeh depth-of-field with a long lens, which blurs far more than the Gaussian's 1.5 cap
+    private readonly HashSet<object> _strongRequests = new HashSet<object>();
+    private Volume _strongVolume;
+    private float _strongWeight;
+
+    /// <summary>Ask for the extra-strong blur (true) or release it (false). Ask for the normal blur as well as a fallback.</summary>
+    public static void RequestStrong(object owner, bool on)
+    {
+        var b = Get();
+        if (on) b._strongRequests.Add(owner); else b._strongRequests.Remove(owner);
+    }
+
     public static void RequestScope(object owner, bool on)
     {
         var b = Get();
@@ -53,6 +65,8 @@ public class ScreenBlur : MonoBehaviour
         if (_instance == null) return;
         _instance._requests.Clear();
         _instance._scopeRequests.Clear();
+        _instance._strongRequests.Clear();
+        _instance._strongWeight = 0f;
         _instance._scopeWeight = 0f;
         _instance._weight = 0f;
         _instance.Apply();
@@ -87,6 +101,18 @@ public class ScreenBlur : MonoBehaviour
         _scopeVolume = sgo.AddComponent<Volume>();
         _scopeVolume.isGlobal = true; _scopeVolume.priority = 90f; _scopeVolume.profile = sp; _scopeVolume.weight = 0f;
 
+        // Strong volume: Bokeh with a 300 mm lens at f/1 focused 0.5 m away puts everything beyond arm's length well out of focus
+        var strong = ScriptableObject.CreateInstance<VolumeProfile>();
+        var bdof = strong.Add<DepthOfField>(true);
+        bdof.mode.Override(DepthOfFieldMode.Bokeh);
+        bdof.focusDistance.Override(0.5f);
+        bdof.focalLength.Override(300f);
+        bdof.aperture.Override(1f);
+        var bgo = new GameObject("StrongBlurVolume");
+        bgo.transform.SetParent(transform, false);
+        _strongVolume = bgo.AddComponent<Volume>();
+        _strongVolume.isGlobal = true; _strongVolume.priority = 110f; _strongVolume.profile = strong; _strongVolume.weight = 0f;
+
         SceneManager.sceneLoaded += (s, m) => Clear();
     }
 
@@ -95,6 +121,7 @@ public class ScreenBlur : MonoBehaviour
         float target = _requests.Count > 0 ? 1f : 0f;
         _weight = Mathf.MoveTowards(_weight, target, Time.unscaledDeltaTime * 3.2f);
         _scopeWeight = Mathf.MoveTowards(_scopeWeight, _scopeRequests.Count > 0 ? 1f : 0f, Time.unscaledDeltaTime * 5f);
+        _strongWeight = Mathf.MoveTowards(_strongWeight, _strongRequests.Count > 0 ? 1f : 0f, Time.unscaledDeltaTime * 4f);
         Apply();
     }
 
@@ -103,6 +130,11 @@ public class ScreenBlur : MonoBehaviour
         if (_volume == null) return;
         _volume.weight = Mathf.SmoothStep(0f, 1f, _weight);
         _volume.enabled = _weight > 0.001f;
+        if (_strongVolume != null)
+        {
+            _strongVolume.weight = Mathf.SmoothStep(0f, 1f, _strongWeight);
+            _strongVolume.enabled = _strongWeight > 0.001f;
+        }
         if (_scopeVolume != null)
         {
             _scopeVolume.weight = Mathf.SmoothStep(0f, 1f, _scopeWeight);

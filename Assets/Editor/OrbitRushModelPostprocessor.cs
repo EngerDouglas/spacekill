@@ -126,7 +126,6 @@ public class OrbitRushModelPostprocessor : AssetPostprocessor
             string file = Path.GetFileNameWithoutExtension(assetPath);
             if (file.EndsWith("Normal")) ti.textureType = TextureImporterType.NormalMap;
             else if (file.EndsWith("MetalSmooth") || file.EndsWith("AO")) ti.sRGBTexture = false;
-            if (file == "Explosion") { ti.alphaIsTransparency = true; ti.wrapMode = TextureWrapMode.Clamp; ti.mipmapEnabled = false; ti.maxTextureSize = 2048; ti.textureCompression = TextureImporterCompression.CompressedHQ; return; }
             ti.maxTextureSize = 2048;
             ti.mipmapEnabled = true;
             ti.anisoLevel = 8;

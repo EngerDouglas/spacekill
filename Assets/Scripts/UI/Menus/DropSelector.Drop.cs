@@ -196,7 +196,6 @@ public partial class DropSelector
         boom.transform.position = P + up * 5f;
         boom.type = LightType.Point; boom.color = new Color(1f, 0.7f, 0.4f); boom.range = 90f; boom.shadows = LightShadows.None;
 
-        _explQuad = BuildExplosion();
         var dust = new List<Dust>();
         var dustMat = Lit(DustColor(), Color.black, 0f, 0.1f);
         for (int i = 0; i < 38; i++)
@@ -228,7 +227,6 @@ public partial class DropSelector
             _cam.fieldOfView = Mathf.Lerp(50f, 44f, u);
             _flash.color = new Color(1f, 1f, 1f, Mathf.MoveTowards(_flash.color.a, 0f, dt * 2.2f));
             boom.intensity = 40f * Mathf.Pow(1f - Mathf.Clamp01(t / 0.9f), 2f);
-            UpdateExplosion(P, up, t);
 
             foreach (var d in dust)
             {
@@ -269,33 +267,6 @@ public partial class DropSelector
         ComputeFinal(P, up, side, T);
         yield return FadeTo(1f, 0.4f);
         if (ship != null) Destroy(ship);
-    }
-
-    /// <summary>The explosion (Trial explosion VDB baked to a sprite sheet): a camera-facing quad with the flipbook shader.</summary>
-    private Transform BuildExplosion()
-    {
-        var tex = Resources.Load<Texture2D>("Pod/Explosion");
-        var sh = Shader.Find("OrbitRush/Flipbook");
-        if (tex == null || sh == null) return null;
-        _explMat = new Material(sh) { name = "Explosion" };
-        _explMat.SetTexture("_MainTex", tex);
-        _explMat.SetFloat("_Cols", 8f); _explMat.SetFloat("_Rows", 7f); _explMat.SetFloat("_Frames", ExplFrames);
-        _explMat.SetFloat("_Intensity", 1.8f);
-        var q = Prim(PrimitiveType.Quad, _world, Vector3.zero, Vector3.one * ExplSize, _explMat, "Explosion");
-        return q.transform;
-    }
-
-    private void UpdateExplosion(Vector3 P, Vector3 up, float t)
-    {
-        if (_explQuad == null) return;
-        float u = Mathf.Clamp01(t / ExplDuration);
-        _explMat.SetFloat("_Frame", u * (ExplFrames - 1));
-        _explMat.SetFloat("_Fade", 1f - Mathf.InverseLerp(0.88f, 1f, u));
-        Vector3 centre = P + up * (ExplSize * (0.5f - ExplBaseFrac));
-        _explQuad.position = centre;
-        Vector3 f = centre - _cam.transform.position;
-        if (f.sqrMagnitude > 0.01f) _explQuad.rotation = Quaternion.LookRotation(f, up);
-        _explQuad.gameObject.SetActive(u < 1f);
     }
 
     private Color DustColor()
@@ -546,12 +517,6 @@ public partial class DropSelector
 
     private const float PodScale = 3.6f;          // the 1.07 m barrel becomes a ~3.9 m pod
     private Material _podMat;
-    private Material _explMat;
-    private Transform _explQuad;
-    private const float ExplSize = 32f;           // metres: side of the explosion sprite
-    private const float ExplBaseFrac = 0.04f;     // how far above the cell's bottom edge the ground line sits (set by the packing)
-    private const float ExplDuration = 1.9f;
-    private const int ExplFrames = 55;
     private Vector3 _fireScale = new Vector3(2.6f, 7f, 2.6f), _coreScale = new Vector3(1.3f, 4f, 1.3f);   // full-size flame (ellipsoid fallback)
 
     private static Material _podTemplate;
